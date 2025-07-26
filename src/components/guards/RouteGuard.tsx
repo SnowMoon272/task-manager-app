@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/auth";
+import ClientOnly from "@/components/ClientOnly";
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -14,24 +15,23 @@ const protectedRoutes = ["/dashboard", "/tasks", "/profile", "/board", "/setting
 // Rutas de autenticación (solo para usuarios no autenticados)
 const authRoutes = ["/login", "/register"];
 
-export default function RouteGuard({ children }: RouteGuardProps) {
+function RouteGuardContent({ children }: RouteGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
-  const [hasMounted, setHasMounted] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    setHasMounted(true);
-  }, []);
+    const init = async () => {
+      await checkAuth();
+      setIsInitialized(true);
+    };
+
+    init();
+  }, [checkAuth]);
 
   useEffect(() => {
-    if (hasMounted) {
-      checkAuth();
-    }
-  }, [checkAuth, hasMounted]);
-
-  useEffect(() => {
-    if (!hasMounted || isLoading) return;
+    if (!isInitialized || isLoading) return;
 
     const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
     const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
@@ -54,15 +54,10 @@ export default function RouteGuard({ children }: RouteGuardProps) {
       router.push("/dashboard");
       return;
     }
-  }, [isAuthenticated, isLoading, pathname, router, hasMounted]);
-
-  // No renderizar nada hasta que el componente se haya montado
-  if (!hasMounted) {
-    return null;
-  }
+  }, [isAuthenticated, isLoading, pathname, router, isInitialized]);
 
   // Mostrar loading mientras verifica autenticación
-  if (isLoading) {
+  if (!isInitialized || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -74,5 +69,13 @@ export default function RouteGuard({ children }: RouteGuardProps) {
   }
 
   return <>{children}</>;
+}
+
+export default function RouteGuard({ children }: RouteGuardProps) {
+  return (
+    <ClientOnly>
+      <RouteGuardContent>{children}</RouteGuardContent>
+    </ClientOnly>
+  );
 }
 

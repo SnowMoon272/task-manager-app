@@ -1,28 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useAuthStore } from "@/store/auth";
+import ClientOnly from "@/components/ClientOnly";
 
-export function StoreInitializer({ children }: { children: React.ReactNode }) {
+function StoreInitializerContent({ children }: { children: React.ReactNode }) {
   const initialize = useAuthStore((state) => state.initialize);
-  const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (hasMounted) {
-      // Inicializar el store después del montaje del componente
-      initialize();
-    }
-  }, [initialize, hasMounted]);
-
-  // No renderizar nada hasta que el componente se haya montado
-  if (!hasMounted) {
-    return null;
-  }
+    // Inicializar el store después del montaje
+    initialize();
+  }, [initialize]);
 
   return <>{children}</>;
+}
+
+export function StoreInitializer({ children }: { children: React.ReactNode }) {
+  return (
+    <ClientOnly>
+      <StoreInitializerContent>{children}</StoreInitializerContent>
+    </ClientOnly>
+  );
 }
 

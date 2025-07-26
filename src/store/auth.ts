@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { User } from "@/types";
-import apiService from "@/services/api";
+import { login as apiLogin, register as apiRegister, getCurrentUser } from "@/services/api";
 
 // Helper functions for cookies
 const setCookie = (name: string, value: string, days = 7) => {
@@ -84,7 +84,7 @@ export const useAuthStore = create<AuthState>()(
             return;
           }
 
-          const response = await apiService.login({ email, password });
+          const response = await apiLogin({ email, password });
 
           if (response.success && response.data) {
             const authData = response.data as { token: string; user: User };
@@ -115,7 +115,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           set({ isLoading: true });
 
-          const response = await apiService.register({ name, email, password });
+          const response = await apiRegister({ name, email, password });
 
           if (response.success && response.data) {
             const authData = response.data as { token: string; user: User };
@@ -163,7 +163,7 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           set({ isLoading: true });
-          const response = await apiService.getCurrentUser();
+          const response = await getCurrentUser();
 
           if (response.success && response.data) {
             const userData = response.data as { user: User };

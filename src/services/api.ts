@@ -1,4 +1,4 @@
-// const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5001';PI configuration and utilities
+// API configuration and utilities
 import { CreateTaskData, UpdateTaskData, LoginCredentials, RegisterData } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
@@ -10,113 +10,111 @@ interface ApiResponse<T = unknown> {
   error?: string;
 }
 
-class ApiService {
-  private baseURL: string;
+// Helper function to get auth token
+const getAuthToken = (): string | null => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("token");
+};
 
-  constructor() {
-    this.baseURL = API_BASE_URL;
-  }
+// Base request function
+const request = async <T = unknown>(
+  endpoint: string,
+  options: RequestInit = {},
+): Promise<ApiResponse<T>> => {
+  const url = `${API_BASE_URL}/api${endpoint}`;
+  const token = getAuthToken();
 
-  private async request<T = unknown>(
-    endpoint: string,
-    options: RequestInit = {},
-  ): Promise<ApiResponse<T>> {
-    const url = `${this.baseURL}/api${endpoint}`;
+  const config: RequestInit = {
+    headers: {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...options.headers,
+    },
+    ...options,
+  };
 
-    // Get token from localStorage if available
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  try {
+    const response = await fetch(url, config);
+    const data = await response.json();
 
-    const config: RequestInit = {
-      headers: {
-        "Content-Type": "application/json",
-        ...(token && { Authorization: `Bearer ${token}` }),
-        ...options.headers,
-      },
-      ...options,
-    };
-
-    try {
-      const response = await fetch(url, config);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Something went wrong");
-      }
-
-      return data;
-    } catch (error) {
-      console.error("API Error:", error);
-      throw error;
-    }
-  }
-
-  // Auth methods
-  async register(userData: RegisterData) {
-    return this.request("/auth/register", {
-      method: "POST",
-      body: JSON.stringify(userData),
-    });
-  }
-
-  async login(credentials: LoginCredentials) {
-    return this.request("/auth/login", {
-      method: "POST",
-      body: JSON.stringify(credentials),
-    });
-  }
-
-  async getCurrentUser() {
-    return this.request("/auth/me");
-  }
-
-  // Task methods
-  async getTasks(filters?: { status?: string; priority?: string; assignee?: string }) {
-    const params = new URLSearchParams();
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value) params.append(key, value);
-      });
+    if (!response.ok) {
+      throw new Error(data.message || "Something went wrong");
     }
 
-    const query = params.toString() ? `?${params.toString()}` : "";
-    return this.request(`/tasks${query}`);
+    return data;
+  } catch (error) {
+    console.error("API Error:", error);
+    throw error;
   }
+};
 
-  async getTask(id: string) {
-    return this.request(`/tasks/${id}`);
-  }
+// Auth methods
+export const register = async (userData: RegisterData) => {
+  return request("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(userData),
+  });
+};
 
-  async createTask(taskData: CreateTaskData) {
-    return this.request("/tasks", {
-      method: "POST",
-      body: JSON.stringify(taskData),
+export const login = async (credentials: LoginCredentials) => {
+  return request("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(credentials),
+  });
+};
+
+export const getCurrentUser = async () => {
+  return request("/auth/me");
+};
+
+// Task methods
+export const getTasks = async (filters?: {
+  status?: string;
+  priority?: string;
+  assignee?: string;
+}) => {
+  const params = new URLSearchParams();
+  if (filters) {
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) params.append(key, value);
     });
   }
 
-  async updateTask(id: string, updates: UpdateTaskData) {
-    return this.request(`/tasks/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(updates),
-    });
-  }
+  const query = params.toString() ? `?${params.toString()}` : "";
+  return request(`/tasks${query}`);
+};
 
-  async deleteTask(id: string) {
-    return this.request(`/tasks/${id}`, {
-      method: "DELETE",
-    });
-  }
+export const getTask = async (id: string) => {
+  return request(`/tasks/${id}`);
+};
 
-  // User methods
-  async getUsers() {
-    return this.request("/users");
-  }
+export const createTask = async (taskData: CreateTaskData) => {
+  return request("/tasks", {
+    method: "POST",
+    body: JSON.stringify(taskData),
+  });
+};
 
-  // Health check
-  async healthCheck() {
-    return this.request("/health");
-  }
-}
+export const updateTask = async (id: string, updates: UpdateTaskData) => {
+  return request(`/tasks/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(updates),
+  });
+};
 
-export const apiService = new ApiService();
-export default apiService;
+export const deleteTask = async (id: string) => {
+  return request(`/tasks/${id}`, {
+    method: "DELETE",
+  });
+};
+
+// User methods
+export const getUsers = async () => {
+  return request("/users");
+};
+
+// Health check
+export const healthCheck = async () => {
+  return request("/health");
+};
 
