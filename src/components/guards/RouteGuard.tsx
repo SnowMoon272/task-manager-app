@@ -9,10 +9,7 @@ interface RouteGuardProps {
   children: React.ReactNode;
 }
 
-// Rutas que requieren autenticación
 const protectedRoutes = ["/dashboard", "/tasks", "/profile", "/board", "/settings"];
-
-// Rutas de autenticación (solo para usuarios no autenticados)
 const authRoutes = ["/login", "/register"];
 
 function RouteGuardContent({ children }: RouteGuardProps) {
@@ -37,26 +34,22 @@ function RouteGuardContent({ children }: RouteGuardProps) {
     const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
 
     if (isProtectedRoute && !isAuthenticated) {
-      // Redirigir a login si intenta acceder a ruta protegida sin auth
       const loginUrl = `/login?callbackUrl=${encodeURIComponent(pathname)}`;
       router.push(loginUrl);
       return;
     }
 
     if (isAuthRoute && isAuthenticated) {
-      // Redirigir a dashboard si ya está autenticado y va a login/register
       router.push("/dashboard");
       return;
     }
 
     if (pathname === "/" && isAuthenticated) {
-      // Redirigir a dashboard si está en home y ya está autenticado
       router.push("/dashboard");
       return;
     }
   }, [isAuthenticated, isLoading, pathname, router, isInitialized]);
 
-  // Mostrar loading mientras verifica autenticación
   if (!isInitialized || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
