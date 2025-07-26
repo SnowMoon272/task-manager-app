@@ -1,14 +1,8 @@
 "use client";
 
 import { useState, useEffect, createContext, useContext } from "react";
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  avatar?: string;
-}
+import apiService from "@/services/api";
+import { User, LoginCredentials, RegisterData } from "@/types";
 
 interface AuthContextType {
   user: User | null;
@@ -28,22 +22,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
-      fetchCurrentUser(token);
+      fetchCurrentUser();
     }
   }, []);
 
-  const fetchCurrentUser = async (token: string) => {
+  const fetchCurrentUser = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/auth/me", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.data.user);
+      const response = await apiService.getCurrentUser();
+      if (response.success && response.data) {
+        const userData = response.data as { user: User };
+        setUser(userData.user);
       } else {
         localStorage.removeItem("token");
       }
@@ -61,11 +50,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Mock authentication for demo - usar estas credenciales para probar
       if (email === "demo@taskmanager.com" && password === "demo123") {
-        const mockUser = {
-          id: "1",
+        const mockUser: User = {
+          _id: "1",
           email: "demo@taskmanager.com",
           name: "Usuario Demo",
           role: "user",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         };
 
         localStorage.setItem("token", "demo-token");
@@ -73,21 +64,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const credentials: LoginCredentials = { email, password };
+      const response = await apiService.login(credentials);
 
-      const data = await response.json();
-
-      if (response.ok) {
-        localStorage.setItem("token", data.data.token);
-        setUser(data.data.user);
+      if (response.success && response.data) {
+        const authData = response.data as { token: string; user: User };
+        // Asegurar que el usuario tenga _id (normalizar la respuesta del backend)
+        const normalizedUser = {
+          ...authData.user,
+          _id: authData.user._id || authData.user.id || "",
+        };
+        localStorage.setItem("token", authData.token);
+        setUser(normalizedUser);
       } else {
-        throw new Error(data.message || "Error al iniciar sesión");
+        throw new Error(response.message || "Error al iniciar sesión");
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -100,21 +90,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = async (name: string, email: string, password: string) => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name, email, password }),
-      });
+      const userData: RegisterData = { name, email, password };
+      const response = await apiService.register(userData);
 
-      const data = await response.json();
-
-      if (response.ok) {
-        localStorage.setItem("token", data.data.token);
-        setUser(data.data.user);
+      if (response.success && response.data) {
+        const authData = response.data as { token: string; user: User };
+        // Asegurar que el usuario tenga _id (normalizar la respuesta del backend)
+        const normalizedUser = {
+          ...authData.user,
+          _id: authData.user._id || authData.user.id || "",
+        };
+        localStorage.setItem("token", authData.token);
+        setUser(normalizedUser);
       } else {
-        throw new Error(data.message || "Error al crear cuenta");
+        throw new Error(response.message || "Error al crear cuenta");
       }
     } catch (error) {
       console.error("Register error:", error);
