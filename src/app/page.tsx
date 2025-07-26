@@ -1,128 +1,161 @@
 "use client";
 
-import { useState } from "react";
-import apiService from "@/services/api";
-import { Task } from "@/types";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/auth";
 
 export default function Home() {
-  const [apiStatus, setApiStatus] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [isLoadingTasks, setIsLoadingTasks] = useState(false);
+  const router = useRouter();
+  const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
+  const [hasMounted, setHasMounted] = useState(false);
 
-  const testApiConnection = async () => {
-    setIsLoading(true);
-    try {
-      const response = await apiService.healthCheck();
-      if (response.success) {
-        setApiStatus("✅ API conectada correctamente");
-      } else {
-        setApiStatus("❌ Error en la API");
-      }
-    } catch (error) {
-      setApiStatus("❌ Error de conexión: " + (error as Error).message);
-    } finally {
-      setIsLoading(false);
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (hasMounted) {
+      checkAuth();
     }
-  };
+  }, [checkAuth, hasMounted]);
 
-  const testGetTasks = async () => {
-    setIsLoadingTasks(true);
-    try {
-      // Simular token (en una app real vendría del contexto de auth)
-      localStorage.setItem(
-        "token",
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODg1MTA2MGJhNzBkY2M2MjZkYzdjYmUiLCJlbWFpbCI6InBydWViYUBlamVtcGxvLmNvbSIsImlhdCI6MTc1MzU1MjY3MCwiZXhwIjoxNzU0MTU3NDcwfQ.s73LvGgpPDZP7bJ0piWiK1iarerqclJKzLihRvU5keM",
-      );
-
-      const response = await apiService.getTasks();
-      if (response.success && response.data) {
-        const tasksData = response.data as { tasks: Task[] };
-        setTasks(tasksData.tasks || []);
-      }
-    } catch (error) {
-      console.error("Error obteniendo tareas:", error);
-    } finally {
-      setIsLoadingTasks(false);
+  useEffect(() => {
+    if (hasMounted && !isLoading && isAuthenticated) {
+      router.push("/dashboard");
     }
-  };
+  }, [isAuthenticated, isLoading, router, hasMounted]);
+
+  // No renderizar nada hasta que el componente se haya montado
+  if (!hasMounted) {
+    return null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm">
-        <h1 className="text-4xl font-bold text-center mb-8">Task Manager App</h1>
-        <p className="text-center text-gray-600 mb-8">
-          Bienvenido a tu aplicación de gestión de tareas
-        </p>
-
-        {/* Test API Connection */}
-        <div className="mb-8 text-center">
-          <div className="flex gap-4 justify-center">
-            <button
-              onClick={testApiConnection}
-              disabled={isLoading}
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="container mx-auto px-4 py-16">
+        {/* Hero Section */}
+        <div className="text-center mb-16">
+          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">Task Manager</h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            Organiza tu trabajo de manera eficiente con nuestro sistema de gestión de tareas basado
+            en tableros Kanban
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/login"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors"
             >
-              {isLoading ? "Probando..." : "Probar Conexión API"}
-            </button>
-
-            <button
-              onClick={testGetTasks}
-              disabled={isLoadingTasks}
-              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+              Iniciar Sesión
+            </Link>
+            <Link
+              href="/register"
+              className="bg-white hover:bg-gray-50 text-blue-600 font-semibold py-3 px-8 rounded-lg border-2 border-blue-600 transition-colors"
             >
-              {isLoadingTasks ? "Cargando..." : "Obtener Tareas"}
-            </button>
+              Registrarse
+            </Link>
           </div>
-
-          {apiStatus && <p className="mt-2 text-sm">{apiStatus}</p>}
-
-          {/* Tasks Display */}
-          {tasks.length > 0 && (
-            <div className="mt-6 p-4 border rounded-lg bg-gray-50">
-              <h3 className="font-bold mb-4">Tareas encontradas:</h3>
-              {tasks.map((task: Task) => (
-                <div key={task._id} className="mb-2 p-3 bg-white rounded border">
-                  <h4 className="font-semibold">{task.title}</h4>
-                  <p className="text-sm text-gray-600">{task.description}</p>
-                  <div className="flex gap-2 mt-2">
-                    <span
-                      className={`px-2 py-1 rounded text-xs ${
-                        task.status === "todo"
-                          ? "bg-yellow-200"
-                          : task.status === "in-progress"
-                          ? "bg-blue-200"
-                          : "bg-green-200"
-                      }`}
-                    >
-                      {task.status}
-                    </span>
-                    <span
-                      className={`px-2 py-1 rounded text-xs ${
-                        task.priority === "high"
-                          ? "bg-red-200"
-                          : task.priority === "medium"
-                          ? "bg-yellow-200"
-                          : "bg-gray-200"
-                      }`}
-                    >
-                      {task.priority}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-md mx-auto">
-          <div className="p-6 border rounded-lg hover:shadow-lg transition-shadow">
-            <h2 className="text-xl font-semibold mb-2">📝 Gestionar Tareas</h2>
-            <p className="text-gray-600">Organiza tus tareas con tableros Kanban</p>
+        {/* Features Section */}
+        <div className="grid md:grid-cols-3 gap-8 mb-16">
+          <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+              <svg
+                className="w-6 h-6 text-blue-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Gestión de Tareas</h3>
+            <p className="text-gray-600">
+              Crea, edita y organiza tus tareas con facilidad. Asigna prioridades y fechas límite.
+            </p>
           </div>
-          <div className="p-6 border rounded-lg hover:shadow-lg transition-shadow">
-            <h2 className="text-xl font-semibold mb-2">👤 Autenticación</h2>
-            <p className="text-gray-600">Inicia sesión para acceder a tus tareas</p>
+
+          <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+              <svg
+                className="w-6 h-6 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Tablero Kanban</h3>
+            <p className="text-gray-600">
+              Visualiza el progreso de tus tareas con un tablero Kanban intuitivo y drag-and-drop.
+            </p>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
+            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+              <svg
+                className="w-6 h-6 text-purple-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Colaboración</h3>
+            <p className="text-gray-600">
+              Comparte proyectos y colabora en tiempo real con tu equipo de trabajo.
+            </p>
+          </div>
+        </div>
+
+        {/* Demo Section */}
+        <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+          <h2 className="text-3xl font-bold mb-4">¿Listo para comenzar?</h2>
+          <p className="text-gray-600 mb-6">
+            Únete a miles de usuarios que ya están organizando su trabajo de manera más eficiente
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/register"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors"
+            >
+              Comenzar Gratis
+            </Link>
+            <Link
+              href="/login"
+              className="text-blue-600 hover:text-blue-700 font-semibold py-3 px-8 transition-colors"
+            >
+              ¿Ya tienes cuenta? Inicia sesión
+            </Link>
           </div>
         </div>
       </div>
