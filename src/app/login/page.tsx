@@ -6,7 +6,6 @@ import { useAuthStore } from "@/store/auth";
 import AuthLayout from "@/components/auth/AuthLayout";
 import LoginHeader from "@/components/auth/LoginHeader";
 import LoginForm from "@/components/auth/LoginForm";
-import DemoCredentials from "@/components/auth/DemoCredentials";
 
 export default function LoginPage() {
   const [error, setError] = useState("");
@@ -32,7 +31,6 @@ export default function LoginPage() {
     <AuthLayout>
       <LoginHeader />
       <LoginForm onSubmit={handleSubmit} isLoading={isLoading} error={error} />
-      <DemoCredentials />
     </AuthLayout>
   );
 }

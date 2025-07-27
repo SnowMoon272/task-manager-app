@@ -1,7 +1,12 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { User } from "@/types";
-import { login as apiLogin, register as apiRegister, getCurrentUser } from "@/services/api";
+import {
+  login as apiLogin,
+  register as apiRegister,
+  getCurrentUser,
+  clearAuthTokens,
+} from "@/services/api";
 
 // Helper functions for cookies
 const setCookie = (name: string, value: string, days = 7) => {
@@ -9,12 +14,6 @@ const setCookie = (name: string, value: string, days = 7) => {
     const expires = new Date();
     expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
     document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
-  }
-};
-
-const deleteCookie = (name: string) => {
-  if (typeof window !== "undefined") {
-    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
   }
 };
 
@@ -61,30 +60,6 @@ export const useAuthStore = create<AuthState>()(
       login: async (email, password) => {
         try {
           set({ isLoading: true });
-
-          // Mock para desarrollo
-          if (email === "demo@taskmanager.com" && password === "demo123") {
-            const mockUser: User = {
-              _id: "demo",
-              id: "demo",
-              email: "demo@taskmanager.com",
-              name: "Usuario Demo",
-              role: "user",
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            };
-
-            set({
-              user: mockUser,
-              token: "demo-token",
-              isAuthenticated: true,
-              isLoading: false,
-            });
-
-            // Guardar token en cookies
-            setCookie("auth-token", "demo-token");
-            return;
-          }
 
           const response = await apiLogin({ email, password });
 
@@ -152,20 +127,14 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false,
         });
 
-        // Eliminar token de cookies
-        deleteCookie("auth-token");
+        // Limpiar todos los tokens usando la función de API
+        clearAuthTokens();
       },
 
       checkAuth: async () => {
-        const { token, user } = get();
+        const { token } = get();
         if (!token) {
           set({ isAuthenticated: false });
-          return;
-        }
-
-        // Si es usuario demo, no hacer petición al backend
-        if (user?.email === "demo@taskmanager.com" && token === "demo-token") {
-          set({ isAuthenticated: true });
           return;
         }
 
@@ -193,6 +162,7 @@ export const useAuthStore = create<AuthState>()(
               isAuthenticated: false,
               isLoading: false,
             });
+            clearAuthTokens();
           }
         } catch (error) {
           console.error("Error checking auth:", error);
@@ -202,6 +172,7 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false,
             isLoading: false,
           });
+          clearAuthTokens();
         }
       },
 
@@ -230,15 +201,6 @@ export const useAuthStore = create<AuthState>()(
 
       updateProfile: async (name: string) => {
         try {
-          const currentUser = get().user;
-
-          // Si es usuario demo, actualizar solo localmente
-          if (currentUser?.email === "demo@taskmanager.com") {
-            const updatedUser = { ...currentUser, name };
-            set({ user: updatedUser });
-            return;
-          }
-
           const response = await fetch("/api/profile", {
             method: "PUT",
             headers: {
@@ -274,13 +236,6 @@ export const useAuthStore = create<AuthState>()(
 
       changePassword: async (currentPassword: string, newPassword: string) => {
         try {
-          const currentUser = get().user;
-
-          // Si es usuario demo, no permitir cambio de contraseña
-          if (currentUser?.email === "demo@taskmanager.com") {
-            throw new Error("Los usuarios demo no pueden cambiar su contraseña");
-          }
-
           const response = await fetch("/api/auth/change-password", {
             method: "PUT",
             headers: {

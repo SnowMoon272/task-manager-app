@@ -1,7 +1,7 @@
 // API configuration and utilities
 import { CreateTaskData, UpdateTaskData, LoginCredentials, RegisterData } from "@/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5001";
 
 interface ApiResponse<T = unknown> {
   success: boolean;
@@ -14,14 +14,7 @@ interface ApiResponse<T = unknown> {
 const getAuthToken = (): string | null => {
   if (typeof window === "undefined") return null;
 
-  // Primero intentar obtener de cookies (para token demo)
-  const cookies = document.cookie.split(";");
-  const authCookie = cookies.find((cookie) => cookie.trim().startsWith("auth-token="));
-  if (authCookie) {
-    return authCookie.split("=")[1];
-  }
-
-  // Si no hay cookie, intentar obtener del store de auth en localStorage
+  // Obtener del store de auth en localStorage
   try {
     const stored = localStorage.getItem("auth-storage");
     if (stored) {
@@ -35,10 +28,23 @@ const getAuthToken = (): string | null => {
   return null;
 };
 
-// Base request function
+// Function to clear all auth tokens
+const clearAuthTokens = () => {
+  if (typeof window !== "undefined") {
+    // Limpiar localStorage
+    try {
+      localStorage.removeItem("token");
+    } catch (error) {
+      console.error("Error clearing token from localStorage:", error);
+    }
+  }
+};
+
+// Base request function with auto token refresh
 const request = async <T = unknown>(
   endpoint: string,
   options: RequestInit = {},
+  isRetry = false,
 ): Promise<ApiResponse<T>> => {
   const url = `${API_BASE_URL}/api${endpoint}`;
   const token = getAuthToken();
@@ -56,7 +62,56 @@ const request = async <T = unknown>(
     const response = await fetch(url, config);
     const data = await response.json();
 
+    // Si el token es inválido y no es un reintento, intentar renovar el token
+    if (
+      (response.status === 401 || response.status === 403) &&
+      !isRetry &&
+      endpoint !== "/auth/refresh" &&
+      endpoint !== "/auth/login" &&
+      token
+    ) {
+      try {
+        console.log("Token expired/invalid, attempting refresh...");
+        const refreshResponse = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json();
+          const newToken = refreshData.data?.token;
+
+          if (newToken) {
+            console.log("Token refreshed successfully, retrying request...");
+            // Reintentar la petición original con el nuevo token
+            return request<T>(endpoint, options, true);
+          }
+        }
+      } catch (refreshError) {
+        console.error("Token refresh failed:", refreshError);
+        // Limpiar tokens inválidos
+        clearAuthTokens();
+        // TEMPORALMENTE DESHABILITADO: Si falla la renovación, redirigir al login
+        // if (typeof window !== "undefined") {
+        //   window.location.href = "/login";
+        // }
+        return data;
+      }
+    }
+
+    // Si la respuesta no es exitosa y llegamos aquí, significa que no se pudo renovar el token
     if (!response.ok) {
+      // Si es un error de autenticación, limpiar tokens y redirigir
+      if (response.status === 401 || response.status === 403) {
+        clearAuthTokens();
+        // TEMPORALMENTE DESHABILITADO: redireccionar
+        // if (typeof window !== "undefined") {
+        //   window.location.href = "/login";
+        // }
+      }
       throw new Error(data.message || "Something went wrong");
     }
 
@@ -84,6 +139,12 @@ export const login = async (credentials: LoginCredentials) => {
 
 export const getCurrentUser = async () => {
   return request("/auth/me");
+};
+
+export const refreshToken = async () => {
+  return request("/auth/refresh", {
+    method: "POST",
+  });
 };
 
 // Task methods
@@ -136,4 +197,14 @@ export const getUsers = async () => {
 export const healthCheck = async () => {
   return request("/health");
 };
+
+// Auth utility functions
+export const logout = () => {
+  clearAuthTokens();
+  if (typeof window !== "undefined") {
+    window.location.href = "/login";
+  }
+};
+
+export { clearAuthTokens };
 

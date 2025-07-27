@@ -10,7 +10,8 @@ function StoreInitializerContent({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Inicializar el store después del montaje
     initialize();
-  }, [initialize]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Solo ejecutar una vez al montar
 
   return <>{children}</>;
 }

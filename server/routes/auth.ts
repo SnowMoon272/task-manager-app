@@ -2,6 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User, { IUser } from "../models/User";
+import { authenticateToken } from "../middleware/auth";
 
 const router = Router();
 
@@ -156,6 +157,49 @@ router.get("/me", async (req, res) => {
     res.status(401).json({
       success: false,
       message: "Invalid token",
+    });
+  }
+});
+
+// Refresh token endpoint
+router.post("/refresh", authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).userId;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Generate new token with extended expiry
+    const newToken = jwt.sign(
+      { userId: user._id, email: user.email },
+      process.env.JWT_SECRET || "fallback-secret",
+      { expiresIn: "7d" },
+    );
+
+    res.json({
+      success: true,
+      message: "Token refreshed successfully",
+      data: {
+        token: newToken,
+        user: {
+          id: user._id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          avatar: user.avatar,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Refresh token error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error refreshing token",
     });
   }
 });

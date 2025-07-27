@@ -11,7 +11,11 @@ router.use(authenticateToken);
 router.get("/", async (req, res) => {
   try {
     const { status, priority, assignee } = req.query;
-    const filter: any = {};
+    const userId = (req as any).userId;
+    const filter: any = {
+      // Only show tasks where user is creator or assignee
+      $or: [{ creator: userId }, { assignee: userId }],
+    };
 
     // Filter by status if provided
     if (status && typeof status === "string") {
@@ -131,6 +135,15 @@ router.put("/:id", async (req, res) => {
     }
 
     // Check if user is creator or assignee
+    console.log("Update task authorization:", {
+      taskId: req.params.id,
+      userId,
+      taskCreator: task.creator?.toString(),
+      taskAssignee: task.assignee?.toString(),
+      userIsCreator: task.creator.toString() === userId,
+      userIsAssignee: task.assignee && task.assignee.toString() === userId,
+    });
+
     if (task.creator.toString() !== userId && task.assignee?.toString() !== userId) {
       return res.status(403).json({
         success: false,
