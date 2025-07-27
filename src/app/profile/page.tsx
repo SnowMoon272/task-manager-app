@@ -4,12 +4,15 @@ import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileContent from "@/components/profile/ProfileContent";
 import ProfileActions from "@/components/profile/ProfileActions";
 import { useAuthStore } from "@/store/auth";
+import { useRouter } from "next/navigation";
 
 export default function ProfilePage() {
   const { user, logout } = useAuthStore();
+  const router = useRouter();
 
   const handleLogout = async () => {
     await logout();
+    router.push("/");
   };
 
   return (

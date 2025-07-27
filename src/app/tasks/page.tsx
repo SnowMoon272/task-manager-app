@@ -1,13 +1,16 @@
 "use client";
 
 import { useAuthStore } from "@/store/auth";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function TasksPage() {
   const { user, logout } = useAuthStore();
+  const router = useRouter();
 
   const handleLogout = async () => {
     await logout();
+    router.push("/");
   };
 
   return (

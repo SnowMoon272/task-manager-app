@@ -34,8 +34,7 @@ function RouteGuardContent({ children }: RouteGuardProps) {
     const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
 
     if (isProtectedRoute && !isAuthenticated) {
-      const loginUrl = `/login?callbackUrl=${encodeURIComponent(pathname)}`;
-      router.push(loginUrl);
+      router.push("/");
       return;
     }
 
@@ -52,10 +51,10 @@ function RouteGuardContent({ children }: RouteGuardProps) {
 
   if (!isInitialized || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-black">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Verificando autenticación...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-500 mx-auto"></div>
+          <p className="mt-4 text-gray-300">Verificando autenticación...</p>
         </div>
       </div>
     );

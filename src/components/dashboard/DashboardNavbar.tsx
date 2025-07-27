@@ -10,7 +10,7 @@ export default function DashboardNavbar() {
 
   const handleLogout = () => {
     logout();
-    router.push("/login");
+    router.push("/");
   };
 
   // Determinar qué botón mostrar basado en la ruta actual
