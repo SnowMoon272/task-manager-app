@@ -9,25 +9,54 @@ interface RouteGuardProps {
   children: React.ReactNode;
 }
 
-// const protectedRoutes = ["/dashboard", "/tasks", "/profile", "/board", "/settings"];
-// const authRoutes = ["/login", "/register"];
+const protectedRoutes = ["/dashboard", "/tasks", "/profile"];
+const authRoutes = ["/login", "/register"];
 
 function RouteGuardContent({ children }: RouteGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isAuthenticated, isLoading, token } = useAuthStore();
 
   useEffect(() => {
-    // TEMPORALMENTE DESHABILITADO - Permitir navegación manual
-    console.log("RouteGuard check (MANUAL MODE):", {
+    console.log("RouteGuard check:", {
       pathname,
       isAuthenticated,
       isLoading,
+      hasToken: !!token,
     });
 
-    // NO HACER REDIRECCIONES AUTOMÁTICAS
-    return;
-  }, [isAuthenticated, isLoading, pathname, router]);
+    // Esperar a que termine de cargar
+    if (isLoading) {
+      console.log("RouteGuard: Still loading, waiting...");
+      return;
+    }
+
+    // Verificar rutas protegidas
+    const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
+
+    if (isProtectedRoute && !isAuthenticated) {
+      console.log("RouteGuard: Redirecting to login - protected route without auth");
+      router.push(`/`);
+      return;
+    }
+
+    // Verificar rutas de auth cuando ya está autenticado
+    const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
+    if (isAuthRoute && isAuthenticated) {
+      console.log("RouteGuard: Redirecting to dashboard - auth route while authenticated");
+      router.push("/dashboard");
+      return;
+    }
+
+    // Redirigir home a dashboard si está autenticado
+    if (pathname === "/" && isAuthenticated) {
+      console.log("RouteGuard: Redirecting from home to dashboard");
+      router.push("/dashboard");
+      return;
+    }
+
+    console.log("RouteGuard: Access allowed for", pathname);
+  }, [isAuthenticated, isLoading, pathname, router, token]);
 
   if (isLoading) {
     return (

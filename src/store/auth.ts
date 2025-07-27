@@ -8,15 +8,6 @@ import {
   clearAuthTokens,
 } from "@/services/api";
 
-// Helper functions for cookies
-const setCookie = (name: string, value: string, days = 7) => {
-  if (typeof window !== "undefined") {
-    const expires = new Date();
-    expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
-    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
-  }
-};
-
 interface AuthState {
   // Estado
   user: User | null;
@@ -76,9 +67,6 @@ export const useAuthStore = create<AuthState>()(
               isAuthenticated: true,
               isLoading: false,
             });
-
-            // Guardar token en cookies
-            setCookie("auth-token", authData.token);
           } else {
             throw new Error(response.message || "Error al iniciar sesión");
           }
@@ -107,9 +95,6 @@ export const useAuthStore = create<AuthState>()(
               isAuthenticated: true,
               isLoading: false,
             });
-
-            // Guardar token en cookies
-            setCookie("auth-token", authData.token);
           } else {
             throw new Error(response.message || "Error al crear cuenta");
           }
@@ -201,10 +186,17 @@ export const useAuthStore = create<AuthState>()(
 
       updateProfile: async (name: string) => {
         try {
-          const response = await fetch("/api/profile", {
+          const { token } = get();
+          if (!token) {
+            throw new Error("No hay sesión activa");
+          }
+
+          const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5001";
+          const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({ name }),
           });
@@ -236,10 +228,17 @@ export const useAuthStore = create<AuthState>()(
 
       changePassword: async (currentPassword: string, newPassword: string) => {
         try {
-          const response = await fetch("/api/auth/change-password", {
+          const { token } = get();
+          if (!token) {
+            throw new Error("No hay sesión activa");
+          }
+
+          const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5001";
+          const response = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({ currentPassword, newPassword }),
           });

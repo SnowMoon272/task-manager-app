@@ -14,12 +14,14 @@ interface ApiResponse<T = unknown> {
 const getAuthToken = (): string | null => {
   if (typeof window === "undefined") return null;
 
-  // Obtener del store de auth en localStorage
+  // Obtener del localStorage únicamente
   try {
     const stored = localStorage.getItem("auth-storage");
     if (stored) {
       const { state } = JSON.parse(stored);
-      return state.token;
+      if (state.token && state.token !== "undefined" && state.token !== "null") {
+        return state.token;
+      }
     }
   } catch (error) {
     console.error("Error getting token from localStorage:", error);

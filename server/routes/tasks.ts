@@ -1,6 +1,17 @@
-import { Router } from "express";
+import { Router, Request } from "express";
 import Task from "../models/Task";
 import { authenticateToken } from "../middleware/auth";
+
+interface AuthenticatedRequest extends Request {
+  userId?: string;
+}
+
+interface TaskFilter {
+  $or?: Array<{ creator: string } | { assignee: string }>;
+  status?: string;
+  priority?: string;
+  assignee?: string;
+}
 
 const router = Router();
 
@@ -8,13 +19,13 @@ const router = Router();
 router.use(authenticateToken);
 
 // Get all tasks for authenticated user
-router.get("/", async (req, res) => {
+router.get("/", async (req: AuthenticatedRequest, res) => {
   try {
     const { status, priority, assignee } = req.query;
-    const userId = (req as any).userId;
-    const filter: any = {
+    const userId = req.userId;
+    const filter: TaskFilter = {
       // Only show tasks where user is creator or assignee
-      $or: [{ creator: userId }, { assignee: userId }],
+      $or: [{ creator: userId! }, { assignee: userId! }],
     };
 
     // Filter by status if provided
@@ -51,7 +62,7 @@ router.get("/", async (req, res) => {
 });
 
 // Get single task by ID
-router.get("/:id", async (req, res) => {
+router.get("/:id", async (req: AuthenticatedRequest, res) => {
   try {
     const task = await Task.findById(req.params.id)
       .populate("assignee", "name email")
@@ -78,10 +89,10 @@ router.get("/:id", async (req, res) => {
 });
 
 // Create new task
-router.post("/", async (req, res) => {
+router.post("/", async (req: AuthenticatedRequest, res) => {
   try {
     const { title, description, status, priority, assignee, dueDate, tags } = req.body;
-    const userId = (req as any).userId;
+    const userId = req.userId;
 
     if (!title) {
       return res.status(400).json({
@@ -120,10 +131,10 @@ router.post("/", async (req, res) => {
 });
 
 // Update task
-router.put("/:id", async (req, res) => {
+router.put("/:id", async (req: AuthenticatedRequest, res) => {
   try {
     const { title, description, status, priority, assignee, dueDate, tags } = req.body;
-    const userId = (req as any).userId;
+    const userId = req.userId;
 
     const task = await Task.findById(req.params.id);
 
@@ -175,11 +186,15 @@ router.put("/:id", async (req, res) => {
         subtaskProgress: updatedTask?.getSubtaskProgress(),
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Update task error:", error);
 
     // Si es un error de validación de subtareas
-    if (error.message && error.message.includes("subtarea(s) pendiente(s)")) {
+    if (
+      error instanceof Error &&
+      error.message &&
+      error.message.includes("subtarea(s) pendiente(s)")
+    ) {
       return res.status(400).json({
         success: false,
         message: error.message,
@@ -195,9 +210,9 @@ router.put("/:id", async (req, res) => {
 });
 
 // Delete task
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = (req as any).userId;
+    const userId = req.userId;
     const task = await Task.findById(req.params.id);
 
     if (!task) {
@@ -231,10 +246,10 @@ router.delete("/:id", async (req, res) => {
 });
 
 // Add subtask
-router.post("/:id/subtasks", async (req, res) => {
+router.post("/:id/subtasks", async (req: AuthenticatedRequest, res) => {
   try {
     const { title } = req.body;
-    const userId = (req as any).userId;
+    const userId = req.userId;
 
     if (!title) {
       return res.status(400).json({
@@ -285,10 +300,10 @@ router.post("/:id/subtasks", async (req, res) => {
 });
 
 // Update subtask
-router.put("/:id/subtasks/:subtaskId", async (req, res) => {
+router.put("/:id/subtasks/:subtaskId", async (req: AuthenticatedRequest, res) => {
   try {
     const { title, completed } = req.body;
-    const userId = (req as any).userId;
+    const userId = req.userId;
 
     const task = await Task.findById(req.params.id);
 
@@ -308,7 +323,9 @@ router.put("/:id/subtasks/:subtaskId", async (req, res) => {
     }
 
     const subtaskIndex = task.subtasks.findIndex(
-      (subtask: any) => subtask._id.toString() === req.params.subtaskId,
+      (subtask) =>
+        (subtask as unknown as { _id: { toString(): string } })._id.toString() ===
+        req.params.subtaskId,
     );
 
     if (subtaskIndex === -1) {
@@ -342,9 +359,9 @@ router.put("/:id/subtasks/:subtaskId", async (req, res) => {
 });
 
 // Delete subtask
-router.delete("/:id/subtasks/:subtaskId", async (req, res) => {
+router.delete("/:id/subtasks/:subtaskId", async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = (req as any).userId;
+    const userId = req.userId;
 
     const task = await Task.findById(req.params.id);
 
@@ -365,7 +382,9 @@ router.delete("/:id/subtasks/:subtaskId", async (req, res) => {
 
     // Remove subtask by filtering out the one with matching ID
     task.subtasks = task.subtasks.filter(
-      (subtask: any) => subtask._id.toString() !== req.params.subtaskId,
+      (subtask) =>
+        (subtask as unknown as { _id: { toString(): string } })._id.toString() !==
+        req.params.subtaskId,
     );
 
     await task.save();
