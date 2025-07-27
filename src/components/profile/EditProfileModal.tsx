@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SpaceButton from "@/components/ui/SpaceButton";
 
 interface EditProfileModalProps {
@@ -19,6 +19,28 @@ export default function EditProfileModal({
   const [name, setName] = useState(currentName);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isVisible, setIsVisible] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsVisible(true);
+      setName(currentName);
+      setTimeout(() => setIsAnimating(true), 10);
+    } else {
+      setIsAnimating(false);
+      setTimeout(() => setIsVisible(false), 300);
+    }
+  }, [isOpen, currentName]);
+
+  const handleClose = () => {
+    setIsAnimating(false);
+    setTimeout(() => {
+      setIsVisible(false);
+      onClose();
+      setError("");
+    }, 300);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +60,7 @@ export default function EditProfileModal({
 
     try {
       await onSave(name.trim());
-      onClose();
+      handleClose();
     } catch (error) {
       console.error("Error in modal:", error);
       const errorMessage = error instanceof Error ? error.message : "Error al actualizar el perfil";
@@ -54,11 +76,19 @@ export default function EditProfileModal({
     }
   };
 
-  if (!isOpen) return null;
+  if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-gray-800/90 backdrop-blur-sm border border-purple-500/30 rounded-lg p-6 w-full max-w-md mx-4">
+    <div
+      className={`fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 transition-all duration-300 ease-out ${
+        isAnimating ? "opacity-100" : "opacity-0"
+      }`}
+    >
+      <div
+        className={`bg-gray-800/90 backdrop-blur-sm border border-purple-500/30 rounded-lg p-6 w-full max-w-md mx-4 transition-all duration-300 ease-out ${
+          isAnimating ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-4"
+        }`}
+      >
         <h3 className="text-lg font-semibold text-white mb-4">Editar Perfil</h3>
 
         <form onSubmit={handleSubmit}>
@@ -85,7 +115,7 @@ export default function EditProfileModal({
 
           <div className="flex justify-end space-x-3">
             <SpaceButton
-              onClick={onClose}
+              onClick={handleClose}
               variant="secondary"
               className={isLoading ? "opacity-50 cursor-not-allowed" : ""}
             >

@@ -21,6 +21,7 @@ import TaskColumn from "./TaskColumn";
 import TaskCard from "./TaskCard";
 import CreateTaskModal from "./CreateTaskModal";
 import TaskDetailModal from "./TaskDetailModal";
+import TaskBoardHeader, { TaskFilters } from "./TaskBoardHeader";
 
 const columns = [
   {
@@ -52,6 +53,7 @@ export default function TaskBoard() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [filters, setFilters] = useState<TaskFilters>({ priority: null, status: null });
 
   // Algoritmo de detección de colisiones personalizado
   const customCollisionDetection: CollisionDetection = (args) => {
@@ -188,39 +190,68 @@ export default function TaskBoard() {
     setSelectedTask(null);
   };
 
+  const handleFiltersChange = (newFilters: TaskFilters) => {
+    setFilters(newFilters);
+  };
+
+  const getFilteredTasks = () => {
+    let filteredTasks = tasks;
+
+    // Filtrar por prioridad
+    if (filters.priority) {
+      filteredTasks = filteredTasks.filter((task) => task.priority === filters.priority);
+    }
+
+    // Filtrar por estado
+    if (filters.status) {
+      filteredTasks = filteredTasks.filter((task) => task.status === filters.status);
+    }
+
+    return filteredTasks;
+  };
+
   const getTasksByStatus = (status: string) => {
-    return tasks.filter((task) => task.status === status);
+    const filteredTasks = getFilteredTasks();
+    return filteredTasks.filter((task) => task.status === status);
+  };
+
+  // Obtener las columnas a mostrar basado en los filtros
+  const getVisibleColumns = () => {
+    if (filters.status) {
+      // Si hay filtro de estado, mostrar solo esa columna
+      return columns.filter((column) => column.id === filters.status);
+    }
+    return columns; // Mostrar todas las columnas
   };
 
   if (isLoading && tasks.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+      <div className={`w-full ${isCreateModalOpen ? "min-h-screen" : ""}`}>
+        <TaskBoardHeader
+          onCreateTask={() => setIsCreateModalOpen(true)}
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+        />
+        <div className="flex items-center justify-center min-h-[500px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+        </div>
+        <CreateTaskModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSubmit={handleCreateTask}
+        />
       </div>
     );
   }
 
   return (
-    <div className="w-full">
-      {/* Header con botón para crear tarea */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
-            Gestión de Tareas
-          </h2>
-          <p className="text-gray-400 text-sm mt-1">
-            Organiza tus tareas arrastrándolas entre columnas
-          </p>
-        </div>
-
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="group flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg text-sm font-medium transition-all duration-300 shadow-lg hover:shadow-purple-500/25"
-        >
-          <span className="transition-transform group-hover:rotate-90">+</span>
-          <span>Nueva tarea</span>
-        </button>
-      </div>
+    <div className={`w-full ${isCreateModalOpen ? "min-h-screen" : ""}`}>
+      {/* Header componentizado */}
+      <TaskBoardHeader
+        onCreateTask={() => setIsCreateModalOpen(true)}
+        filters={filters}
+        onFiltersChange={handleFiltersChange}
+      />
 
       {/* Error message */}
       {error && (
@@ -230,8 +261,12 @@ export default function TaskBoard() {
       )}
 
       {/* Estado vacío cuando no hay tareas */}
-      {!isLoading && !error && tasks.length === 0 && (
-        <div className="text-center py-12 mb-6">
+      {!isLoading && !error && tasks.length === 0 && !filters.priority && !filters.status && (
+        <div
+          className={`text-center mb-6 flex flex-col justify-center ${
+            isCreateModalOpen ? "py-20 min-h-[500px]" : "py-12 min-h-[300px]"
+          }`}
+        >
           <div className="text-6xl mb-4">🚀</div>
           <h3 className="text-xl font-semibold text-gray-300 mb-2">
             ¡Comienza tu jornada productiva!
@@ -241,7 +276,7 @@ export default function TaskBoard() {
           </p>
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-purple-500/25"
+            className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-purple-500/25 mx-auto"
           >
             <span>+</span>
             <span>Crear mi primera tarea</span>
@@ -249,8 +284,34 @@ export default function TaskBoard() {
         </div>
       )}
 
-      {/* Board - Solo mostrar cuando hay tareas o no está en estado de error */}
-      {!error && (tasks.length > 0 || isLoading) && (
+      {/* Estado cuando no hay tareas que coincidan con los filtros */}
+      {!isLoading &&
+        !error &&
+        tasks.length > 0 &&
+        getFilteredTasks().length === 0 &&
+        (filters.priority || filters.status) && (
+          <div
+            className={`text-center mb-6 flex flex-col justify-center ${
+              isCreateModalOpen ? "py-20 min-h-[400px]" : "py-12 min-h-[250px]"
+            }`}
+          >
+            <div className="text-6xl mb-4">🔍</div>
+            <h3 className="text-xl font-semibold text-gray-300 mb-2">No se encontraron tareas</h3>
+            <p className="text-gray-400 mb-4">
+              No hay tareas que coincidan con los filtros seleccionados.
+            </p>
+            <button
+              onClick={() => setFilters({ priority: null, status: null })}
+              className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white rounded-lg font-medium transition-all duration-300 mx-auto"
+            >
+              <span>🗑️</span>
+              <span>Limpiar filtros</span>
+            </button>
+          </div>
+        )}
+
+      {/* Board - Solo mostrar cuando hay tareas filtradas o no está en estado de error */}
+      {!error && (getFilteredTasks().length > 0 || isLoading) && (
         <DndContext
           sensors={sensors}
           collisionDetection={customCollisionDetection}
@@ -258,8 +319,12 @@ export default function TaskBoard() {
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {columns.map((column) => (
+          <div
+            className={`grid gap-6 ${
+              filters.status ? "grid-cols-1" : "grid-cols-1 md:grid-cols-3"
+            }`}
+          >
+            {getVisibleColumns().map((column) => (
               <TaskColumn
                 key={column.id}
                 id={column.id}
@@ -283,14 +348,12 @@ export default function TaskBoard() {
         </DndContext>
       )}
 
-      {/* Create Task Modal */}
       <CreateTaskModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateTask}
       />
 
-      {/* Task Detail Modal */}
       <TaskDetailModal
         isOpen={isDetailModalOpen}
         onClose={handleCloseDetailModal}

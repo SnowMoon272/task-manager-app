@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SpaceButton from "@/components/ui/SpaceButton";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 
@@ -17,11 +17,37 @@ export default function ChangePasswordModal({ isOpen, onClose, onSave }: ChangeP
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   // Estados para mostrar/ocultar contraseñas
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsVisible(true);
+      setTimeout(() => setIsAnimating(true), 10);
+    } else {
+      setIsAnimating(false);
+      setTimeout(() => setIsVisible(false), 300);
+    }
+  }, [isOpen]);
+
+  const handleClose = () => {
+    setIsAnimating(false);
+    setTimeout(() => {
+      setIsVisible(false);
+      onClose();
+      // Reset form
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setError("");
+      setSuccess("");
+    }, 300);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,20 +107,19 @@ export default function ChangePasswordModal({ isOpen, onClose, onSave }: ChangeP
     }
   };
 
-  const handleClose = () => {
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    setError("");
-    setSuccess("");
-    onClose();
-  };
-
-  if (!isOpen) return null;
+  if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-gray-800/90 backdrop-blur-sm border border-purple-500/30 rounded-lg p-6 w-full max-w-md mx-4">
+    <div
+      className={`fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 transition-all duration-300 ease-out ${
+        isAnimating ? "opacity-100" : "opacity-0"
+      }`}
+    >
+      <div
+        className={`bg-gray-800/90 backdrop-blur-sm border border-purple-500/30 rounded-lg p-6 w-full max-w-md mx-4 transition-all duration-300 ease-out ${
+          isAnimating ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-4"
+        }`}
+      >
         <h3 className="text-lg font-semibold text-white mb-4">Cambiar Contraseña</h3>
 
         <form onSubmit={handleSubmit}>

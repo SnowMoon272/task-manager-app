@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Task } from "@/types";
 
 interface TaskDetailModalProps {
@@ -41,7 +42,28 @@ export default function TaskDetailModal({
   onEdit,
   onDelete,
 }: TaskDetailModalProps) {
-  if (!isOpen || !task) return null;
+  const [isVisible, setIsVisible] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsVisible(true);
+      setTimeout(() => setIsAnimating(true), 10);
+    } else {
+      setIsAnimating(false);
+      setTimeout(() => setIsVisible(false), 300);
+    }
+  }, [isOpen]);
+
+  const handleClose = () => {
+    setIsAnimating(false);
+    setTimeout(() => {
+      setIsVisible(false);
+      onClose();
+    }, 300);
+  };
+
+  if (!isVisible || !task) return null;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -58,14 +80,14 @@ export default function TaskDetailModal({
   const handleEdit = () => {
     if (onEdit) {
       onEdit(task);
-      onClose();
+      handleClose();
     }
   };
 
   const handleDelete = () => {
     if (onDelete && confirm("¿Estás seguro de que quieres eliminar esta tarea?")) {
       onDelete(task._id);
-      onClose();
+      handleClose();
     }
   };
 
@@ -73,14 +95,18 @@ export default function TaskDetailModal({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
+        className={`fixed inset-0 bg-black/50 backdrop-blur-sm transition-all duration-300 ease-out ${
+          isAnimating ? "opacity-100" : "opacity-0"
+        }`}
+        onClick={handleClose}
       />
 
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div
-          className="relative w-full max-w-2xl mx-auto bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-2xl border border-gray-700/50"
+          className={`relative w-full max-w-2xl mx-auto bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-2xl border border-gray-700/50 transition-all duration-300 ease-out ${
+            isAnimating ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-4"
+          }`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -114,7 +140,7 @@ export default function TaskDetailModal({
             </div>
 
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-700/50 rounded-lg"
             >
               ✕
@@ -255,7 +281,7 @@ export default function TaskDetailModal({
             )}
 
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-700/50 border border-gray-600/50 hover:border-gray-500/50 rounded-lg transition-all duration-200"
             >
               Cerrar
