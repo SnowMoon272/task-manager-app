@@ -133,12 +133,20 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
 // Update task
 router.put("/:id", async (req: AuthenticatedRequest, res) => {
   try {
-    const { title, description, status, priority, assignee, dueDate, tags } = req.body;
+    const { title, description, status, priority, assignee, dueDate, tags, subtasks } = req.body;
     const userId = req.userId;
+
+    console.log("Update task request:", {
+      taskId: req.params.id,
+      userId,
+      body: req.body,
+      subtasks: subtasks ? `${subtasks.length} subtasks` : "no subtasks",
+    });
 
     const task = await Task.findById(req.params.id);
 
     if (!task) {
+      console.log("Task not found:", req.params.id);
       return res.status(404).json({
         success: false,
         message: "Task not found",
@@ -156,25 +164,43 @@ router.put("/:id", async (req: AuthenticatedRequest, res) => {
     });
 
     if (task.creator.toString() !== userId && task.assignee?.toString() !== userId) {
+      console.log("Authorization failed for task update");
       return res.status(403).json({
         success: false,
         message: "Not authorized to update this task",
       });
     }
 
-    const updatedTask = await Task.findByIdAndUpdate(
-      req.params.id,
-      {
-        ...(title && { title }),
-        ...(description !== undefined && { description }),
-        ...(status && { status }),
-        ...(priority && { priority }),
-        ...(assignee && { assignee }),
-        ...(dueDate && { dueDate }),
-        ...(tags && { tags }),
-      },
-      { new: true, runValidators: true },
-    )
+    const updateData: Record<string, unknown> = {
+      ...(title && { title }),
+      ...(description !== undefined && { description }),
+      ...(status && { status }),
+      ...(priority && { priority }),
+      ...(assignee && { assignee }),
+      ...(dueDate && { dueDate }),
+      ...(tags && { tags }),
+    };
+
+    // Manejo especial para subtareas
+    if (subtasks !== undefined) {
+      // Filtrar subtareas válidas y extraer solo los campos necesarios
+      const validSubtasks = subtasks
+        .filter((st: { title?: string; completed?: boolean }) => st && st.title && st.title.trim())
+        .map((st: { title: string; completed?: boolean }) => ({
+          title: st.title.trim(),
+          completed: Boolean(st.completed),
+        }));
+
+      updateData.subtasks = validSubtasks;
+      console.log("Processed subtasks:", validSubtasks);
+    }
+
+    console.log("Final update data:", updateData);
+
+    const updatedTask = await Task.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+      runValidators: true,
+    })
       .populate("assignee", "name email")
       .populate("creator", "name email");
 
@@ -187,7 +213,21 @@ router.put("/:id", async (req: AuthenticatedRequest, res) => {
       },
     });
   } catch (error: unknown) {
-    console.error("Update task error:", error);
+    console.error("Update task error:", {
+      error,
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+    });
+
+    // Si es un error de validación de Mongoose
+    if (error && typeof error === "object" && "name" in error && error.name === "ValidationError") {
+      return res.status(400).json({
+        success: false,
+        message: "Validation error",
+        details: error,
+      });
+    }
 
     // Si es un error de validación de subtareas
     if (
@@ -204,7 +244,8 @@ router.put("/:id", async (req: AuthenticatedRequest, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Error updating task",
+      message: error instanceof Error ? error.message : "Error updating task",
+      error: process.env.NODE_ENV === "development" ? error : undefined,
     });
   }
 });

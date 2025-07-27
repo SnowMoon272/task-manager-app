@@ -45,7 +45,8 @@ const columns = [
 ];
 
 export default function TaskBoard() {
-  const { tasks, isLoading, error, createTask, moveTask, deleteTask, clearTasks } = useTasksStore();
+  const { tasks, isLoading, error, createTask, moveTask, deleteTask, updateTask, clearTasks } =
+    useTasksStore();
   const fetchTasks = useTasksStore((state) => state.fetchTasks);
   const { user } = useAuthStore();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -54,6 +55,8 @@ export default function TaskBoard() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [filters, setFilters] = useState<TaskFilters>({ priority: null, status: null });
+  const [showIncompleteSubtasksAlert, setShowIncompleteSubtasksAlert] = useState(false);
+  const [alertTask, setAlertTask] = useState<Task | null>(null);
 
   // Algoritmo de detección de colisiones personalizado
   const customCollisionDetection: CollisionDetection = (args) => {
@@ -100,6 +103,24 @@ export default function TaskBoard() {
     }
   }, [user, currentUserId, clearTasks, fetchTasks]);
 
+  // Actualizar selectedTask cuando se actualice la tarea en el store
+  useEffect(() => {
+    if (selectedTask && tasks.length > 0) {
+      const updatedTask = tasks.find((task) => task._id === selectedTask._id);
+      if (updatedTask) {
+        setSelectedTask(updatedTask);
+      }
+    }
+  }, [tasks, selectedTask]);
+
+  const hasIncompleteSubtasks = (task: Task) => {
+    return (
+      task.subtasks &&
+      task.subtasks.length > 0 &&
+      task.subtasks.some((subtask) => !subtask.completed)
+    );
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
     if (event.active.data.current?.type === "task") {
       setActiveTask(event.active.data.current.task);
@@ -123,6 +144,14 @@ export default function TaskBoard() {
     if (over.data.current?.type === "column") {
       const newStatus = over.data.current?.status as "todo" | "in-progress" | "done";
       if (newStatus && activeTask.status !== newStatus) {
+        // Verificar si se está intentando mover a "done" con subtareas pendientes
+        if (newStatus === "done" && hasIncompleteSubtasks(activeTask)) {
+          setAlertTask(activeTask);
+          setShowIncompleteSubtasksAlert(true);
+          setActiveTask(null);
+          return;
+        }
+
         await moveTask(activeTask._id, newStatus);
       }
     }
@@ -154,6 +183,13 @@ export default function TaskBoard() {
       if (!activeTask || !overTask) return;
 
       if (activeTask.status !== overTask.status) {
+        // Verificar si se está intentando mover a "done" con subtareas pendientes
+        if (overTask.status === "done" && hasIncompleteSubtasks(activeTask)) {
+          setAlertTask(activeTask);
+          setShowIncompleteSubtasksAlert(true);
+          return;
+        }
+
         moveTask(activeTask._id, overTask.status);
       }
     }
@@ -165,6 +201,13 @@ export default function TaskBoard() {
 
       const newStatus = over.data.current?.status as "todo" | "in-progress" | "done";
       if (newStatus && activeTask.status !== newStatus) {
+        // Verificar si se está intentando mover a "done" con subtareas pendientes
+        if (newStatus === "done" && hasIncompleteSubtasks(activeTask)) {
+          setAlertTask(activeTask);
+          setShowIncompleteSubtasksAlert(true);
+          return;
+        }
+
         moveTask(activeTask._id, newStatus);
       }
     }
@@ -177,6 +220,19 @@ export default function TaskBoard() {
   const handleDeleteTask = async (taskId: string) => {
     if (confirm("¿Estás seguro de que quieres eliminar esta tarea?")) {
       await deleteTask(taskId);
+    }
+  };
+
+  const handleEditTask = async (updatedTask: Task) => {
+    try {
+      await updateTask(updatedTask._id, {
+        title: updatedTask.title,
+        description: updatedTask.description,
+        priority: updatedTask.priority,
+        subtasks: updatedTask.subtasks, // Agregar subtareas a la actualización
+      });
+    } catch (error) {
+      console.error("Error updating task:", error);
     }
   };
 
@@ -358,8 +414,95 @@ export default function TaskBoard() {
         isOpen={isDetailModalOpen}
         onClose={handleCloseDetailModal}
         task={selectedTask}
+        onEdit={handleEditTask}
         onDelete={handleDeleteTask}
       />
+
+      {/* Popup de alerta para subtareas incompletas */}
+      {showIncompleteSubtasksAlert && alertTask && (
+        <div className="fixed inset-0 z-60 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-all duration-300" />
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div
+              className="relative w-full max-w-md mx-auto bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-2xl border border-red-500/50"
+              style={{
+                animation: "borderPulse 2s ease-in-out infinite",
+              }}
+            >
+              <style jsx>{`
+                @keyframes borderPulse {
+                  0%,
+                  100% {
+                    border-color: rgba(239, 68, 68, 0.5);
+                  }
+                  50% {
+                    border-color: rgba(239, 68, 68, 0.8);
+                  }
+                }
+              `}</style>
+              <div className="p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
+                    <span className="text-red-400 text-xl">⚠️</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">No se puede completar</h3>
+                    <p className="text-red-400 text-sm">Subtareas pendientes</p>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <p className="text-gray-300 leading-relaxed">
+                    No puedes mover{" "}
+                    <span className="text-purple-400 font-medium">
+                      &quot;{alertTask.title}&quot;
+                    </span>{" "}
+                    a <span className="text-pink-400 font-medium">completada</span> porque aún tiene{" "}
+                    <span className="text-yellow-400 font-medium">
+                      {alertTask.subtasks?.filter((st) => !st.completed).length} subtarea(s)
+                      pendiente(s)
+                    </span>
+                    .
+                  </p>
+
+                  <div className="mt-4 p-3 bg-gray-700/50 rounded-lg border border-gray-600/50">
+                    <p className="text-sm text-gray-400 mb-2">Subtareas pendientes:</p>
+                    <ul className="text-sm text-gray-300 space-y-1">
+                      {alertTask.subtasks
+                        ?.filter((st) => !st.completed)
+                        .slice(0, 3)
+                        .map((subtask, index) => (
+                          <li key={index} className="flex items-center space-x-2">
+                            <span className="text-yellow-400">⭕</span>
+                            <span>{subtask.title}</span>
+                          </li>
+                        ))}
+                      {alertTask.subtasks &&
+                        alertTask.subtasks.filter((st) => !st.completed).length > 3 && (
+                          <li className="text-gray-500 text-xs">
+                            y {alertTask.subtasks.filter((st) => !st.completed).length - 3} más...
+                          </li>
+                        )}
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowIncompleteSubtasksAlert(false);
+                      setAlertTask(null);
+                    }}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 font-medium"
+                  >
+                    Entendido
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

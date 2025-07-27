@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Task, CreateTaskData, TasksResponse, TaskResponse } from "@/types";
+import { Task, CreateTaskData, UpdateTaskData } from "@/types";
 import {
   getTasks as apiGetTasks,
   createTask as apiCreateTask,
@@ -20,7 +20,7 @@ interface TasksState {
   clearTasks: () => void; // Nueva función para limpiar tareas
   fetchTasks: () => Promise<void>;
   createTask: (taskData: CreateTaskData) => Promise<void>;
-  updateTask: (taskId: string, taskData: Partial<CreateTaskData>) => Promise<void>;
+  updateTask: (taskId: string, taskData: UpdateTaskData) => Promise<void>;
   moveTask: (taskId: string, newStatus: "todo" | "in-progress" | "done") => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
 }

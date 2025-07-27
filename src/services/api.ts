@@ -178,10 +178,22 @@ export const createTask = async (taskData: CreateTaskData) => {
 };
 
 export const updateTask = async (id: string, updates: UpdateTaskData) => {
-  return request(`/tasks/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(updates),
-  });
+  console.log("Updating task:", { id, updates });
+  try {
+    const result = await request(`/tasks/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    });
+    console.log("Update task result:", result);
+    return result;
+  } catch (error) {
+    console.error("Update task error details:", {
+      error,
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    throw error;
+  }
 };
 
 export const deleteTask = async (id: string) => {
