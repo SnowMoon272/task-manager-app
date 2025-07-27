@@ -13,6 +13,7 @@ interface TaskColumnProps {
   color: string;
   onEdit?: (task: Task) => void;
   onDelete?: (taskId: string) => void;
+  onTaskClick?: (task: Task) => void;
 }
 
 export default function TaskColumn({
@@ -23,6 +24,7 @@ export default function TaskColumn({
   color,
   onEdit,
   onDelete,
+  onTaskClick,
 }: TaskColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id,
@@ -57,8 +59,8 @@ export default function TaskColumn({
         ref={setNodeRef}
         className={`
           flex-1 p-4 space-y-3 bg-gray-900/30 backdrop-blur-sm rounded-b-lg
-          min-h-[400px] transition-all duration-200
-          ${isOver ? "bg-gray-700/50 ring-2 ring-purple-500/50" : ""}
+          min-h-[400px] transition-all duration-200 border-2 border-transparent
+          ${isOver ? "bg-gray-700/50 border-purple-500/50 shadow-lg shadow-purple-500/25" : ""}
         `}
       >
         <SortableContext
@@ -73,7 +75,13 @@ export default function TaskColumn({
             </div>
           ) : (
             tasks.map((task) => (
-              <TaskCard key={task._id} task={task} onEdit={onEdit} onDelete={onDelete} />
+              <TaskCard
+                key={task._id}
+                task={task}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onTaskClick={onTaskClick}
+              />
             ))
           )}
         </SortableContext>

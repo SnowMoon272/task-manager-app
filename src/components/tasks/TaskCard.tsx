@@ -8,6 +8,7 @@ interface TaskCardProps {
   task: Task;
   onEdit?: (task: Task) => void;
   onDelete?: (taskId: string) => void;
+  onTaskClick?: (task: Task) => void;
 }
 
 const priorityColors = {
@@ -22,7 +23,7 @@ const priorityIcons = {
   high: "🔴",
 };
 
-export default function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
+export default function TaskCard({ task, onEdit, onDelete, onTaskClick }: TaskCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task._id,
     data: {
@@ -34,6 +35,13 @@ export default function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+  };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Solo activar el click si no se está arrastrando y no se hizo click en botones
+    if (!isDragging && !e.defaultPrevented && onTaskClick) {
+      onTaskClick(task);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -63,6 +71,7 @@ export default function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
       style={style}
       {...attributes}
       {...listeners}
+      onClick={handleCardClick}
       className={`
         group relative cursor-grab active:cursor-grabbing
         bg-gray-800/50 backdrop-blur-sm border rounded-lg p-4

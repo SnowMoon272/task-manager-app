@@ -21,12 +21,6 @@ export default function DashboardNavbar() {
           Dashboard
         </SpaceButton>
       );
-    } else if (pathname === "/tasks") {
-      return (
-        <SpaceButton href="/dashboard" variant="purpleToBlue">
-          Dashboard
-        </SpaceButton>
-      );
     } else {
       // En dashboard y otras páginas, mostrar enlace al perfil
       return (

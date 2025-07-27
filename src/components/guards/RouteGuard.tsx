@@ -9,7 +9,7 @@ interface RouteGuardProps {
   children: React.ReactNode;
 }
 
-const protectedRoutes = ["/dashboard", "/tasks", "/profile"];
+const protectedRoutes = ["/dashboard", "/profile"];
 const authRoutes = ["/login", "/register"];
 
 function RouteGuardContent({ children }: RouteGuardProps) {

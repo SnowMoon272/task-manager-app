@@ -10,7 +10,9 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCorners,
+  rectIntersection,
+  pointerWithin,
+  CollisionDetection,
 } from "@dnd-kit/core";
 import { Task, CreateTaskData } from "@/types";
 import { useTasksStore } from "@/store/tasks";
@@ -18,6 +20,7 @@ import { useAuthStore } from "@/store/auth";
 import TaskColumn from "./TaskColumn";
 import TaskCard from "./TaskCard";
 import CreateTaskModal from "./CreateTaskModal";
+import TaskDetailModal from "./TaskDetailModal";
 
 const columns = [
   {
@@ -47,11 +50,26 @@ export default function TaskBoard() {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  // Algoritmo de detección de colisiones personalizado
+  const customCollisionDetection: CollisionDetection = (args) => {
+    // Primero intentamos con pointerWithin para priorizar donde está el puntero
+    const pointerCollisions = pointerWithin(args);
+
+    if (pointerCollisions.length > 0) {
+      return pointerCollisions;
+    }
+
+    // Si no hay colisiones con el puntero, usamos rectIntersection como fallback
+    return rectIntersection(args);
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 50,
       },
     }),
   );
@@ -160,6 +178,16 @@ export default function TaskBoard() {
     }
   };
 
+  const handleTaskClick = (task: Task) => {
+    setSelectedTask(task);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleCloseDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedTask(null);
+  };
+
   const getTasksByStatus = (status: string) => {
     return tasks.filter((task) => task.status === status);
   };
@@ -225,7 +253,7 @@ export default function TaskBoard() {
       {!error && (tasks.length > 0 || isLoading) && (
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={customCollisionDetection}
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
@@ -240,13 +268,14 @@ export default function TaskBoard() {
                 color={column.color}
                 tasks={getTasksByStatus(column.id)}
                 onDelete={handleDeleteTask}
+                onTaskClick={handleTaskClick}
               />
             ))}
           </div>
 
           <DragOverlay>
             {activeTask ? (
-              <div className="rotate-2 scale-105">
+              <div className="cursor-grabbing">
                 <TaskCard task={activeTask} />
               </div>
             ) : null}
@@ -259,6 +288,14 @@ export default function TaskBoard() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateTask}
+      />
+
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={handleCloseDetailModal}
+        task={selectedTask}
+        onDelete={handleDeleteTask}
       />
     </div>
   );
