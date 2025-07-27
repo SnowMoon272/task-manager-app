@@ -89,9 +89,20 @@ const TaskSchema: Schema = new Schema(
   },
 );
 
-// Middleware pre-save para validar que no se pueda marcar como 'done' si hay subtareas pendientes
 TaskSchema.pre("save", function (this: ITask, next) {
-  // Solo validar si el status está siendo cambiado a 'done'
+  if (this.subtasks && this.subtasks.length > 0) {
+    const allCompleted = this.subtasks.every((subtask: ISubtask) => subtask.completed);
+    const anyCompleted = this.subtasks.some((subtask: ISubtask) => subtask.completed);
+
+    if (allCompleted && this.status !== "done") {
+      this.status = "done";
+    } else if (anyCompleted && this.status === "todo") {
+      this.status = "in-progress";
+    } else if (!anyCompleted && this.status === "in-progress") {
+      this.status = "todo";
+    }
+  }
+
   if (
     this.status === "done" &&
     this.subtasks &&
@@ -114,13 +125,10 @@ TaskSchema.pre("save", function (this: ITask, next) {
   next();
 });
 
-// Middleware pre-findOneAndUpdate para validar actualizaciones
 TaskSchema.pre("findOneAndUpdate", function (next) {
   const update = this.getUpdate() as { status?: string };
 
-  // Si se está intentando cambiar el status a 'done'
   if (update && update.status === "done") {
-    // Necesitamos obtener el documento actual para verificar las subtareas
     this.model
       .findOne(this.getQuery())
       .then((task: ITask | null) => {
@@ -148,15 +156,13 @@ TaskSchema.pre("findOneAndUpdate", function (next) {
   }
 });
 
-// Método para verificar si todas las subtareas están completadas
 TaskSchema.methods.areAllSubtasksCompleted = function (): boolean {
   if (!this.subtasks || this.subtasks.length === 0) {
-    return true; // Si no hay subtareas, consideramos que están "completadas"
+    return true;
   }
   return this.subtasks.every((subtask: ISubtask) => subtask.completed);
 };
 
-// Método para obtener el progreso de subtareas
 TaskSchema.methods.getSubtaskProgress = function (): {
   completed: number;
   total: number;
@@ -173,7 +179,6 @@ TaskSchema.methods.getSubtaskProgress = function (): {
   return { completed, total, percentage };
 };
 
-// Indexes for better performance
 TaskSchema.index({ status: 1 });
 TaskSchema.index({ assignee: 1 });
 TaskSchema.index({ creator: 1 });

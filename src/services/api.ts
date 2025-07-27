@@ -13,7 +13,26 @@ interface ApiResponse<T = unknown> {
 // Helper function to get auth token
 const getAuthToken = (): string | null => {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("token");
+
+  // Primero intentar obtener de cookies (para token demo)
+  const cookies = document.cookie.split(";");
+  const authCookie = cookies.find((cookie) => cookie.trim().startsWith("auth-token="));
+  if (authCookie) {
+    return authCookie.split("=")[1];
+  }
+
+  // Si no hay cookie, intentar obtener del store de auth en localStorage
+  try {
+    const stored = localStorage.getItem("auth-storage");
+    if (stored) {
+      const { state } = JSON.parse(stored);
+      return state.token;
+    }
+  } catch (error) {
+    console.error("Error getting token from localStorage:", error);
+  }
+
+  return null;
 };
 
 // Base request function

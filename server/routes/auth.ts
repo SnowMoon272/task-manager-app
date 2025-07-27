@@ -5,7 +5,6 @@ import User, { IUser } from "../models/User";
 
 const router = Router();
 
-// Register user
 router.post("/register", async (req, res) => {
   try {
     const { email, password, name } = req.body;
@@ -18,7 +17,6 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -27,11 +25,9 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // Hash password
     const saltRounds = 12;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Create user
     const user = new User({
       email,
       password: hashedPassword,
@@ -40,7 +36,6 @@ router.post("/register", async (req, res) => {
 
     await user.save();
 
-    // Generate JWT token
     const token = jwt.sign(
       { userId: user._id, email: user.email },
       process.env.JWT_SECRET || "fallback-secret",
@@ -69,12 +64,10 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// Login user
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validate input
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -82,7 +75,6 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // Find user
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({
@@ -91,7 +83,6 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // Check password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -100,7 +91,6 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // Generate JWT token
     const token = jwt.sign(
       { userId: user._id, email: user.email },
       process.env.JWT_SECRET || "fallback-secret",
@@ -129,7 +119,6 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Get current user profile
 router.get("/me", async (req, res) => {
   try {
     const token = req.header("Authorization")?.replace("Bearer ", "");

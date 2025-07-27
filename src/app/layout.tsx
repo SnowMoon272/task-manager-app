@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { StoreInitializer } from "@/components/providers/StoreInitializer";
 import RouteGuard from "@/components/guards/RouteGuard";
+import StarField from "@/components/ui/StarField";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,9 +28,14 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <StoreInitializer>
-          <RouteGuard>{children}</RouteGuard>
-        </StoreInitializer>
+        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black relative">
+          <StarField />
+          <div className="relative z-10 min-h-screen">
+            <StoreInitializer>
+              <RouteGuard>{children}</RouteGuard>
+            </StoreInitializer>
+          </div>
+        </div>
       </body>
     </html>
   );

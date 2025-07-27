@@ -34,6 +34,8 @@ interface AuthState {
   logout: () => void;
   checkAuth: () => Promise<void>;
   initialize: () => void;
+  updateProfile: (name: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -155,9 +157,15 @@ export const useAuthStore = create<AuthState>()(
       },
 
       checkAuth: async () => {
-        const { token } = get();
+        const { token, user } = get();
         if (!token) {
           set({ isAuthenticated: false });
+          return;
+        }
+
+        // Si es usuario demo, no hacer petición al backend
+        if (user?.email === "demo@taskmanager.com" && token === "demo-token") {
+          set({ isAuthenticated: true });
           return;
         }
 
@@ -217,6 +225,90 @@ export const useAuthStore = create<AuthState>()(
           } catch (error) {
             console.error("Error initializing auth store:", error);
           }
+        }
+      },
+
+      updateProfile: async (name: string) => {
+        try {
+          const currentUser = get().user;
+
+          // Si es usuario demo, actualizar solo localmente
+          if (currentUser?.email === "demo@taskmanager.com") {
+            const updatedUser = { ...currentUser, name };
+            set({ user: updatedUser });
+            return;
+          }
+
+          const response = await fetch("/api/profile", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ name }),
+          });
+
+          let data;
+          try {
+            data = await response.json();
+          } catch (parseError) {
+            console.error("Error parsing response:", parseError);
+            throw new Error("Error de comunicación con el servidor");
+          }
+
+          console.log("Response status:", response.status);
+          console.log("Response data:", data);
+
+          if (!response.ok) {
+            throw new Error(data.message || `Error del servidor: ${response.status}`);
+          }
+
+          if (data.success && data.data?.user) {
+            const updatedUser = { ...get().user, ...data.data.user };
+            set({ user: updatedUser });
+          }
+        } catch (error) {
+          console.error("Update profile error:", error);
+          throw error;
+        }
+      },
+
+      changePassword: async (currentPassword: string, newPassword: string) => {
+        try {
+          const currentUser = get().user;
+
+          // Si es usuario demo, no permitir cambio de contraseña
+          if (currentUser?.email === "demo@taskmanager.com") {
+            throw new Error("Los usuarios demo no pueden cambiar su contraseña");
+          }
+
+          const response = await fetch("/api/auth/change-password", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ currentPassword, newPassword }),
+          });
+
+          let data;
+          try {
+            data = await response.json();
+          } catch (parseError) {
+            console.error("Error parsing response:", parseError);
+            throw new Error("Error de comunicación con el servidor");
+          }
+
+          console.log("Change password response status:", response.status);
+          console.log("Change password response data:", data);
+
+          if (!response.ok) {
+            throw new Error(data.message || `Error del servidor: ${response.status}`);
+          }
+
+          // Si el cambio fue exitoso, no necesitamos actualizar el estado del usuario
+          // solo mostrar un mensaje de éxito
+        } catch (error) {
+          console.error("Change password error:", error);
+          throw error;
         }
       },
     }),

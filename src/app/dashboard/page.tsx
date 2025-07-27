@@ -1,54 +1,22 @@
 "use client";
 
+import DashboardNavbar from "@/components/dashboard/DashboardNavbar";
 import { useAuthStore } from "@/store/auth";
-import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
-  const { user, logout, isLoading } = useAuthStore();
-  const router = useRouter();
-
-  const handleLogout = () => {
-    logout();
-    router.push("/login");
-  };
+  const { isLoading } = useAuthStore();
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-black">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black">
-      {/* Stars background effect */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="stars"></div>
-        <div className="stars2"></div>
-        <div className="stars3"></div>
-      </div>
-
-      <nav className="bg-gray-800/30 backdrop-blur-sm border-b border-purple-500/30 relative z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-semibold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                Task Manager
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-gray-300">Hola, {user?.name}</span>
-              <button
-                onClick={handleLogout}
-                className="bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg hover:shadow-red-500/25"
-              >
-                Cerrar sesión
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen">
+      <DashboardNavbar />
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 relative z-10">
         <div className="px-4 py-6 sm:px-0">

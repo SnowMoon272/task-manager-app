@@ -5,19 +5,16 @@ import morgan from "morgan";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 
-// Routes
 import authRoutes from "./routes/auth";
 import taskRoutes from "./routes/tasks";
 import userRoutes from "./routes/users";
 
-// Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/taskmanager";
 
-// Middleware
 app.use(helmet());
 app.use(
   cors({
@@ -29,7 +26,6 @@ app.use(morgan("combined"));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// Connect to MongoDB
 mongoose
   .connect(MONGODB_URI)
   .then(() => {
@@ -40,12 +36,10 @@ mongoose
     process.exit(1);
   });
 
-// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/users", userRoutes);
 
-// Health check endpoint
 app.get("/api/health", (req, res) => {
   res.status(200).json({
     status: "OK",
@@ -54,7 +48,6 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Error handling middleware
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error(err.stack);
@@ -65,7 +58,6 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
   });
 });
 
-// 404 handler
 app.use("*", (req, res) => {
   res.status(404).json({
     success: false,
@@ -73,7 +65,6 @@ app.use("*", (req, res) => {
   });
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);

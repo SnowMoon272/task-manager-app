@@ -46,7 +46,5 @@ const UserSchema: Schema = new Schema(
   },
 );
 
-// Note: Email index is automatically created by the 'unique: true' property above
-
 export default mongoose.model<IUser>("User", UserSchema);
 
