@@ -2,6 +2,8 @@
 
 Una aplicación completa de gestión de tareas con tablero Kanban interactivo, construida con las tecnologías más modernas para ofrecer una experiencia de usuario excepcional.
 
+El .env esta incluido en esta documentacion.
+
 ## 🚀 Características Principales
 
 ### 🎯 Gestión de Tareas Completa
@@ -168,8 +170,30 @@ nano .env
 **Variables importantes a configurar:**
 
 ```bash
+## Completamente local
 # Database Configuration
 MONGODB_URI=mongodb://localhost:27017/taskmanager
+
+# JWT Configuration
+JWT_SECRET=your-super-secret-jwt-key-to-T1-Prueba-Tecnica
+
+# Server Configuration
+PORT=5001
+NODE_ENV=development
+
+# Frontend Configuration
+FRONTEND_URL=http://localhost:3000
+API_BASE_URL=http://localhost:5001
+NEXT_PUBLIC_API_BASE_URL=http://localhost:5001
+NEXT_PUBLIC_API_URL=http://localhost:5001
+
+# Database Name
+DB_NAME=taskmanager
+
+------------------------------------
+## Conectado a mongoDb en la nube
+# Database Configuration
+MONGODB_URI=mongodb+srv://castielaltair0027:MyVXAf5IHS1vlvyQ@cluster0.xkaqiiv.mongodb.net/taskmanager?retryWrites=true&w=majority&appName=Cluster0
 
 # JWT Configuration
 JWT_SECRET=your-super-secret-jwt-key-to-T1-Prueba-Tecnica
@@ -210,6 +234,8 @@ brew services list | grep mongodb
 2. Crear un cluster gratuito
 3. Obtener la string de conexión
 4. Actualizar `MONGODB_URI` en `.env`
+
+## Esto ya esta realizado solo falta usar el env adecuado
 
 ### 5. Ejecutar la Aplicación
 
