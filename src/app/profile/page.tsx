@@ -22,9 +22,7 @@ export default function ProfilePage() {
       <div className="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="border-2 border-purple-500/30 bg-gray-800/30 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden">
           <ProfileHeader title="Perfil de Usuario" />
-
           <ProfileContent user={user} />
-
           <div className="px-6 pb-6">
             <ProfileActions onLogout={handleLogout} />
           </div>

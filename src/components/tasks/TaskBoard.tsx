@@ -21,6 +21,7 @@ import TaskCard from "./TaskCard";
 import CreateTaskModal from "./CreateTaskModal";
 import TaskDetailModal from "./TaskDetailModal";
 import TaskBoardHeader, { TaskFilters } from "./TaskBoardHeader";
+import ConfirmationModal from "../ui/ConfirmationModal";
 
 const columns = [
   {
@@ -401,163 +402,62 @@ export default function TaskBoard() {
       />
 
       {/* Popup de alerta para subtareas incompletas */}
-      {showIncompleteSubtasksAlert && alertTask && (
-        <div className="fixed inset-0 z-60 overflow-y-auto">
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-all duration-300" />
-          <div className="flex min-h-full items-center justify-center p-4">
-            <div
-              className="relative w-full max-w-md mx-auto bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-2xl border border-red-500/50"
-              style={{
-                animation: "borderPulse 2s ease-in-out infinite",
-              }}
-            >
-              <style jsx>{`
-                @keyframes borderPulse {
-                  0%,
-                  100% {
-                    border-color: rgba(239, 68, 68, 0.5);
-                  }
-                  50% {
-                    border-color: rgba(239, 68, 68, 0.8);
-                  }
-                }
-              `}</style>
-              <div className="p-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
-                    <span className="text-red-400 text-xl">⚠️</span>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white">No se puede completar</h3>
-                    <p className="text-red-400 text-sm">Subtareas pendientes</p>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <p className="text-gray-300 leading-relaxed">
-                    No puedes mover{" "}
-                    <span className="text-purple-400 font-medium">
-                      &quot;{alertTask.title}&quot;
-                    </span>{" "}
-                    a <span className="text-pink-400 font-medium">completada</span> porque aún tiene{" "}
-                    <span className="text-yellow-400 font-medium">
-                      {alertTask.subtasks?.filter((st) => !st.completed).length} subtarea(s)
-                      pendiente(s)
-                    </span>
-                    .
-                  </p>
-
-                  <div className="mt-4 p-3 bg-gray-700/50 rounded-lg border border-gray-600/50">
-                    <p className="text-sm text-gray-400 mb-2">Subtareas pendientes:</p>
-                    <ul className="text-sm text-gray-300 space-y-1">
-                      {alertTask.subtasks
-                        ?.filter((st) => !st.completed)
-                        .slice(0, 3)
-                        .map((subtask, index) => (
-                          <li key={index} className="flex items-center space-x-2">
-                            <span className="text-yellow-400">⭕</span>
-                            <span>{subtask.title}</span>
-                          </li>
-                        ))}
-                      {alertTask.subtasks &&
-                        alertTask.subtasks.filter((st) => !st.completed).length > 3 && (
-                          <li className="text-gray-500 text-xs">
-                            y {alertTask.subtasks.filter((st) => !st.completed).length - 3} más...
-                          </li>
-                        )}
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end space-x-3">
-                  <button
-                    onClick={() => {
-                      setShowIncompleteSubtasksAlert(false);
-                      setAlertTask(null);
-                    }}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 font-medium"
-                  >
-                    Entendido
-                  </button>
-                </div>
-              </div>
+      <ConfirmationModal
+        isOpen={showIncompleteSubtasksAlert && !!alertTask}
+        title="No se puede completar"
+        description={`No puedes mover "${alertTask?.title}" a completada porque aún tiene ${
+          alertTask?.subtasks?.filter((st) => !st.completed).length
+        } subtarea(s) pendiente(s).`}
+        icon="⚠️"
+        alertMode={true}
+        confirmButtonText="Entendido"
+        customContent={
+          alertTask && (
+            <div className="p-3 bg-gray-700/50 rounded-lg border border-gray-600/50">
+              <p className="text-sm text-gray-400 mb-2">Subtareas pendientes:</p>
+              <ul className="text-sm text-gray-300 space-y-1">
+                {alertTask.subtasks
+                  ?.filter((st) => !st.completed)
+                  .slice(0, 3)
+                  .map((subtask, index) => (
+                    <li key={index} className="flex items-center space-x-2">
+                      <span className="text-yellow-400">⭕</span>
+                      <span>{subtask.title}</span>
+                    </li>
+                  ))}
+                {alertTask.subtasks &&
+                  alertTask.subtasks.filter((st) => !st.completed).length > 3 && (
+                    <li className="text-gray-500 text-xs">
+                      y {alertTask.subtasks.filter((st) => !st.completed).length - 3} más...
+                    </li>
+                  )}
+              </ul>
             </div>
-          </div>
-        </div>
-      )}
+          )
+        }
+        onConfirm={() => {
+          setShowIncompleteSubtasksAlert(false);
+          setAlertTask(null);
+        }}
+      />
 
       {/* Popup de confirmación de eliminación */}
-      {showDeleteConfirmation && taskToDelete && (
-        <div className="fixed inset-0 z-80 overflow-y-auto">
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-all duration-300" />
-          <div className="flex min-h-full items-center justify-center p-4">
-            <div
-              className="relative w-full max-w-md mx-auto bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-2xl border border-red-500/50"
-              style={{
-                animation: "borderPulse 2s ease-in-out infinite",
-              }}
-            >
-              <style jsx>{`
-                @keyframes borderPulse {
-                  0%,
-                  100% {
-                    border-color: rgba(239, 68, 68, 0.5);
-                  }
-                  50% {
-                    border-color: rgba(239, 68, 68, 0.8);
-                  }
-                }
-              `}</style>
-              <div className="p-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
-                    <span className="text-red-400 text-xl">🗑️</span>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white">Confirmar eliminación</h3>
-                    <p className="text-red-400 text-sm">Esta acción no se puede deshacer</p>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <p className="text-gray-300 leading-relaxed">
-                    ¿Estás seguro de que quieres eliminar la tarea{" "}
-                    <span className="text-purple-400 font-medium">
-                      &quot;{taskToDelete.title}&quot;
-                    </span>
-                    ?
-                  </p>
-
-                  {taskToDelete.subtasks && taskToDelete.subtasks.length > 0 && (
-                    <div className="mt-4 p-3 bg-gray-700/50 rounded-lg border border-gray-600/50">
-                      <p className="text-sm text-gray-400 mb-1">⚠️ Advertencia:</p>
-                      <p className="text-sm text-yellow-400">
-                        Esta tarea tiene {taskToDelete.subtasks.length} subtarea(s) que también se
-                        eliminarán.
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-end space-x-3">
-                  <button
-                    onClick={cancelDelete}
-                    className="px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-700/50 border border-gray-600/50 hover:border-gray-500/50 rounded-lg transition-all duration-200"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={confirmDelete}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 font-medium"
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal
+        isOpen={showDeleteConfirmation && !!taskToDelete}
+        title="Confirmar eliminación"
+        description="¿Estás seguro de que quieres eliminar la tarea "
+        itemName={taskToDelete?.title}
+        icon="🗑️"
+        warningMessage={
+          taskToDelete?.subtasks && taskToDelete.subtasks.length > 0
+            ? `Esta tarea tiene ${taskToDelete.subtasks.length} subtarea(s) que también se eliminarán.`
+            : undefined
+        }
+        confirmButtonText="Eliminar"
+        cancelButtonText="Cancelar"
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

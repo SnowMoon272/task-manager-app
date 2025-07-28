@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Task, Subtask, Comment } from "@/types";
 import { useAuthStore } from "@/store/auth";
+import ConfirmationModal from "../ui/ConfirmationModal";
 
 interface TaskDetailModalProps {
   isOpen: boolean;
@@ -63,6 +64,10 @@ export default function TaskDetailModal({
   const [editedCommentText, setEditedCommentText] = useState("");
   const [showDeleteCommentConfirmation, setShowDeleteCommentConfirmation] = useState(false);
   const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
+  const [showDeleteSubtaskConfirmation, setShowDeleteSubtaskConfirmation] = useState(false);
+  const [subtaskToDelete, setSubtaskToDelete] = useState<{ index: number; title: string } | null>(
+    null,
+  );
 
   // Obtener usuario autenticado
   const { user } = useAuthStore();
@@ -96,25 +101,35 @@ export default function TaskDetailModal({
   };
 
   const handleDeleteSubtask = (subtaskIndex: number, subtaskTitle: string) => {
-    if (confirm(`¿Estás seguro de que quieres eliminar la subtarea "${subtaskTitle}"?`)) {
-      if (task) {
-        // Crear una nueva lista sin la subtarea eliminada
-        const updatedSubtasks = task.subtasks.filter((_, index) => index !== subtaskIndex);
+    setSubtaskToDelete({ index: subtaskIndex, title: subtaskTitle });
+    setShowDeleteSubtaskConfirmation(true);
+  };
 
-        // Crear una copia actualizada de la tarea con las subtareas modificadas
-        const updatedTask = {
-          ...task,
-          subtasks: updatedSubtasks,
-        };
+  const confirmDeleteSubtask = () => {
+    if (task && subtaskToDelete) {
+      // Crear una nueva lista sin la subtarea eliminada
+      const updatedSubtasks = task.subtasks.filter((_, index) => index !== subtaskToDelete.index);
 
-        // Usar onUpdateSubtasks si está disponible, sino usar onEdit
-        if (onUpdateSubtasks) {
-          onUpdateSubtasks(task._id, updatedSubtasks);
-        } else if (onEdit) {
-          onEdit(updatedTask);
-        }
+      // Crear una copia actualizada de la tarea con las subtareas modificadas
+      const updatedTask = {
+        ...task,
+        subtasks: updatedSubtasks,
+      };
+
+      // Usar onUpdateSubtasks si está disponible, sino usar onEdit
+      if (onUpdateSubtasks) {
+        onUpdateSubtasks(task._id, updatedSubtasks);
+      } else if (onEdit) {
+        onEdit(updatedTask);
       }
     }
+    setShowDeleteSubtaskConfirmation(false);
+    setSubtaskToDelete(null);
+  };
+
+  const cancelDeleteSubtask = () => {
+    setShowDeleteSubtaskConfirmation(false);
+    setSubtaskToDelete(null);
   };
 
   const handleToggleSubtask = (subtaskIndex: number) => {
@@ -987,277 +1002,104 @@ export default function TaskDetailModal({
       </div>
 
       {/* Popup de alerta para subtareas incompletas */}
-      {showIncompleteSubtasksAlert && (
-        <div className="fixed inset-0 z-60 overflow-y-auto">
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-all duration-300" />
-          <div className="flex min-h-full items-center justify-center p-4">
-            <div
-              className="relative w-full max-w-md mx-auto bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-2xl border border-red-500/50"
-              style={{
-                animation: "borderPulse 2s ease-in-out infinite",
-              }}
-            >
-              <style jsx>{`
-                @keyframes borderPulse {
-                  0%,
-                  100% {
-                    border-color: rgba(239, 68, 68, 0.5);
-                  }
-                  50% {
-                    border-color: rgba(239, 68, 68, 0.8);
-                  }
-                }
-              `}</style>
-              <div className="p-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
-                    <span className="text-red-400 text-xl">⚠️</span>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white">No se puede completar</h3>
-                    <p className="text-red-400 text-sm">Subtareas pendientes</p>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <p className="text-gray-300 leading-relaxed">
-                    No puedes marcar esta tarea como{" "}
-                    <span className="text-pink-400 font-medium">completada</span> porque aún tienes{" "}
-                    <span className="text-yellow-400 font-medium">
-                      {task?.subtasks?.filter((st) => !st.completed).length} subtarea(s)
-                      pendiente(s)
-                    </span>
-                    .
-                  </p>
-
-                  <div className="mt-4 p-3 bg-gray-700/50 rounded-lg border border-gray-600/50">
-                    <p className="text-sm text-gray-400 mb-2">Subtareas pendientes:</p>
-                    <ul className="text-sm text-gray-300 space-y-1">
-                      {task?.subtasks
-                        ?.filter((st) => !st.completed)
-                        .slice(0, 3)
-                        .map((subtask, index) => (
-                          <li key={index} className="flex items-center space-x-2">
-                            <span className="text-yellow-400">⭕</span>
-                            <span>{subtask.title}</span>
-                          </li>
-                        ))}
-                      {task?.subtasks && task.subtasks.filter((st) => !st.completed).length > 3 && (
-                        <li className="text-gray-500 text-xs">
-                          y {task.subtasks.filter((st) => !st.completed).length - 3} más...
-                        </li>
-                      )}
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end space-x-3">
-                  <button
-                    onClick={() => setShowIncompleteSubtasksAlert(false)}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 font-medium"
-                  >
-                    Entendido
-                  </button>
-                </div>
-              </div>
+      <ConfirmationModal
+        isOpen={showIncompleteSubtasksAlert}
+        title="No se puede completar"
+        description={`No puedes marcar esta tarea como completada porque aún tienes ${
+          task?.subtasks?.filter((st) => !st.completed).length
+        } subtarea(s) pendiente(s).`}
+        icon="⚠️"
+        alertMode={true}
+        confirmButtonText="Entendido"
+        customContent={
+          task && (
+            <div className="p-3 bg-gray-700/50 rounded-lg border border-gray-600/50">
+              <p className="text-sm text-gray-400 mb-2">Subtareas pendientes:</p>
+              <ul className="text-sm text-gray-300 space-y-1">
+                {task.subtasks
+                  ?.filter((st) => !st.completed)
+                  .slice(0, 3)
+                  .map((subtask, index) => (
+                    <li key={index} className="flex items-center space-x-2">
+                      <span className="text-yellow-400">⭕</span>
+                      <span>{subtask.title}</span>
+                    </li>
+                  ))}
+                {task.subtasks && task.subtasks.filter((st) => !st.completed).length > 3 && (
+                  <li className="text-gray-500 text-xs">
+                    y {task.subtasks.filter((st) => !st.completed).length - 3} más...
+                  </li>
+                )}
+              </ul>
             </div>
-          </div>
-        </div>
-      )}
+          )
+        }
+        onConfirm={() => setShowIncompleteSubtasksAlert(false)}
+      />
 
       {/* Popup de alerta para bloqueo de subtareas */}
-      {showSubtaskBlockAlert && (
-        <div className="fixed inset-0 z-70 overflow-y-auto">
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-all duration-300" />
-          <div className="flex min-h-full items-center justify-center p-4">
-            <div
-              className="relative w-full max-w-md mx-auto bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-2xl border border-orange-500/50"
-              style={{
-                animation: "borderPulse 2s ease-in-out infinite",
-              }}
-            >
-              <style jsx>{`
-                @keyframes borderPulse {
-                  0%,
-                  100% {
-                    border-color: rgba(249, 115, 22, 0.5);
-                  }
-                  50% {
-                    border-color: rgba(249, 115, 22, 0.8);
-                  }
-                }
-              `}</style>
-              <div className="p-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
-                    <span className="text-orange-400 text-xl">🔒</span>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white">Acción bloqueada</h3>
-                    <p className="text-orange-400 text-sm">Tarea principal completada</p>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <p className="text-gray-300 leading-relaxed">
-                    No puedes marcar una{" "}
-                    <span className="text-cyan-400 font-medium">subtarea como pendiente</span>{" "}
-                    mientras la tarea principal esté en estado{" "}
-                    <span className="text-pink-400 font-medium">completada</span>.
-                  </p>
-
-                  <div className="mt-4 p-3 bg-gray-700/50 rounded-lg border border-gray-600/50">
-                    <p className="text-sm text-gray-400 mb-2">💡 Sugerencia:</p>
-                    <p className="text-sm text-gray-300">
-                      Para modificar esta subtarea, primero mueve la tarea principal a{" "}
-                      <span className="text-purple-400">&quot;Pendiente&quot;</span> o{" "}
-                      <span className="text-cyan-400">&quot;En Progreso&quot;</span>.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end space-x-3">
-                  <button
-                    onClick={() => setShowSubtaskBlockAlert(false)}
-                    className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-all duration-200 font-medium"
-                  >
-                    Entendido
-                  </button>
-                </div>
-              </div>
-            </div>
+      <ConfirmationModal
+        isOpen={showSubtaskBlockAlert}
+        title="Acción bloqueada"
+        description="No puedes marcar una subtarea como pendiente mientras la tarea principal esté en estado completada."
+        icon="🔒"
+        alertMode={true}
+        confirmButtonText="Entendido"
+        customContent={
+          <div className="p-3 bg-gray-700/50 rounded-lg border border-gray-600/50">
+            <p className="text-sm text-gray-400 mb-2">💡 Sugerencia:</p>
+            <p className="text-sm text-gray-300">
+              Para modificar esta subtarea, primero mueve la tarea principal a{" "}
+              <span className="text-purple-400">&quot;Pendiente&quot;</span> o{" "}
+              <span className="text-cyan-400">&quot;En Progreso&quot;</span>.
+            </p>
           </div>
-        </div>
-      )}
+        }
+        onConfirm={() => setShowSubtaskBlockAlert(false)}
+      />
 
       {/* Popup de confirmación de eliminación */}
-      {showDeleteConfirmation && (
-        <div className="fixed inset-0 z-80 overflow-y-auto">
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-all duration-300" />
-          <div className="flex min-h-full items-center justify-center p-4">
-            <div
-              className="relative w-full max-w-md mx-auto bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-2xl border border-red-500/50"
-              style={{
-                animation: "borderPulse 2s ease-in-out infinite",
-              }}
-            >
-              <style jsx>{`
-                @keyframes borderPulse {
-                  0%,
-                  100% {
-                    border-color: rgba(239, 68, 68, 0.5);
-                  }
-                  50% {
-                    border-color: rgba(239, 68, 68, 0.8);
-                  }
-                }
-              `}</style>
-              <div className="p-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
-                    <span className="text-red-400 text-xl">🗑️</span>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white">Confirmar eliminación</h3>
-                    <p className="text-red-400 text-sm">Esta acción no se puede deshacer</p>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <p className="text-gray-300 leading-relaxed">
-                    ¿Estás seguro de que quieres eliminar la tarea{" "}
-                    <span className="text-purple-400 font-medium">&quot;{task?.title}&quot;</span>?
-                  </p>
-
-                  {task?.subtasks && task.subtasks.length > 0 && (
-                    <div className="mt-4 p-3 bg-gray-700/50 rounded-lg border border-gray-600/50">
-                      <p className="text-sm text-gray-400 mb-1">⚠️ Advertencia:</p>
-                      <p className="text-sm text-yellow-400">
-                        Esta tarea tiene {task.subtasks.length} subtarea(s) que también se
-                        eliminarán.
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-end space-x-3">
-                  <button
-                    onClick={cancelDelete}
-                    className="px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-700/50 border border-gray-600/50 hover:border-gray-500/50 rounded-lg transition-all duration-200"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={confirmDelete}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 font-medium"
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal
+        isOpen={showDeleteConfirmation}
+        title="Confirmar eliminación"
+        description="¿Estás seguro de que quieres eliminar la tarea "
+        itemName={task?.title}
+        icon="🗑️"
+        warningMessage={
+          task?.subtasks && task.subtasks.length > 0
+            ? `Esta tarea tiene ${task.subtasks.length} subtarea(s) que también se eliminarán.`
+            : undefined
+        }
+        confirmButtonText="Eliminar"
+        cancelButtonText="Cancelar"
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
 
       {/* Popup de confirmación de eliminación de comentario */}
-      {showDeleteCommentConfirmation && (
-        <div className="fixed inset-0 z-80 overflow-y-auto">
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-all duration-300" />
-          <div className="flex min-h-full items-center justify-center p-4">
-            <div
-              className="relative w-full max-w-md mx-auto bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-2xl border border-red-500/50"
-              style={{
-                animation: "borderPulse 2s ease-in-out infinite",
-              }}
-            >
-              <style jsx>{`
-                @keyframes borderPulse {
-                  0%,
-                  100% {
-                    border-color: rgba(239, 68, 68, 0.5);
-                  }
-                  50% {
-                    border-color: rgba(239, 68, 68, 0.8);
-                  }
-                }
-              `}</style>
-              <div className="p-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
-                    <span className="text-red-400 text-xl">💬</span>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white">Eliminar comentario</h3>
-                    <p className="text-red-400 text-sm">Esta acción no se puede deshacer</p>
-                  </div>
-                </div>
+      <ConfirmationModal
+        isOpen={showDeleteCommentConfirmation}
+        title="Eliminar comentario"
+        description="¿Estás seguro de que quieres eliminar este comentario"
+        icon="💬"
+        confirmButtonText="Eliminar"
+        cancelButtonText="Cancelar"
+        onConfirm={confirmDeleteComment}
+        onCancel={cancelDeleteComment}
+      />
 
-                <div className="mb-6">
-                  <p className="text-gray-300 leading-relaxed">
-                    ¿Estás seguro de que quieres eliminar este comentario?
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-end space-x-3">
-                  <button
-                    onClick={cancelDeleteComment}
-                    className="px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-700/50 border border-gray-600/50 hover:border-gray-500/50 rounded-lg transition-all duration-200"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={confirmDeleteComment}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 font-medium"
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Popup de confirmación de eliminación de subtarea */}
+      <ConfirmationModal
+        isOpen={showDeleteSubtaskConfirmation}
+        title="Eliminar subtarea"
+        description="¿Estás seguro de que quieres eliminar la subtarea "
+        itemName={subtaskToDelete?.title}
+        icon="📋"
+        confirmButtonText="Eliminar"
+        cancelButtonText="Cancelar"
+        onConfirm={confirmDeleteSubtask}
+        onCancel={cancelDeleteSubtask}
+      />
     </div>
   );
 }
