@@ -21,6 +21,7 @@ export interface Task {
   dueDate?: string;
   tags: string[];
   subtasks: Subtask[];
+  comments: Comment[];
   createdAt: string;
   updatedAt: string;
 }
@@ -29,6 +30,14 @@ export interface Subtask {
   _id: string;
   title: string;
   completed: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Comment {
+  _id?: string;
+  text: string;
+  author: User | string;
   createdAt: string;
   updatedAt: string;
 }
@@ -45,6 +54,7 @@ export interface CreateTaskData {
 
 export interface UpdateTaskData extends Partial<CreateTaskData> {
   subtasks?: Subtask[];
+  comments?: Comment[];
 }
 
 export interface LoginCredentials {

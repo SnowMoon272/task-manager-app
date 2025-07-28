@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Task, Subtask } from "@/types";
+import { Task, Subtask, Comment } from "@/types";
+import { useAuthStore } from "@/store/auth";
 
 interface TaskDetailModalProps {
   isOpen: boolean;
@@ -56,6 +57,15 @@ export default function TaskDetailModal({
   const [showIncompleteSubtasksAlert, setShowIncompleteSubtasksAlert] = useState(false);
   const [showSubtaskBlockAlert, setShowSubtaskBlockAlert] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [isCreatingComment, setIsCreatingComment] = useState(false);
+  const [newCommentText, setNewCommentText] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editedCommentText, setEditedCommentText] = useState("");
+  const [showDeleteCommentConfirmation, setShowDeleteCommentConfirmation] = useState(false);
+  const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
+
+  // Obtener usuario autenticado
+  const { user } = useAuthStore();
 
   useEffect(() => {
     if (isOpen) {
@@ -247,6 +257,113 @@ export default function TaskDetailModal({
       handleSaveEdit();
     } else if (e.key === "Escape") {
       handleCancelEdit();
+    }
+  };
+
+  // Funciones para manejar comentarios
+  const handleCreateComment = () => {
+    if (newCommentText.trim() && task && user) {
+      const newComment: Comment = {
+        text: newCommentText.trim(),
+        author: user._id, // Usar el ID del usuario autenticado
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const updatedComments = [...(task.comments || []), newComment];
+      const updatedTask = {
+        ...task,
+        comments: updatedComments,
+      };
+
+      if (onEdit) {
+        onEdit(updatedTask);
+      }
+
+      setNewCommentText("");
+      setIsCreatingComment(false);
+    }
+  };
+
+  const handleEditComment = (commentId: string) => {
+    if (task) {
+      const comment = task.comments?.find((c) => c._id === commentId);
+      if (comment) {
+        setEditingCommentId(commentId);
+        setEditedCommentText(comment.text);
+      }
+    }
+  };
+
+  const handleSaveCommentEdit = () => {
+    if (editedCommentText.trim() && task && editingCommentId) {
+      const updatedComments =
+        task.comments?.map((comment) =>
+          comment._id === editingCommentId
+            ? { ...comment, text: editedCommentText.trim(), updatedAt: new Date().toISOString() }
+            : comment,
+        ) || [];
+
+      const updatedTask = {
+        ...task,
+        comments: updatedComments,
+      };
+
+      if (onEdit) {
+        onEdit(updatedTask);
+      }
+
+      setEditingCommentId(null);
+      setEditedCommentText("");
+    }
+  };
+
+  const handleCancelCommentEdit = () => {
+    setEditingCommentId(null);
+    setEditedCommentText("");
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    setCommentToDelete(commentId);
+    setShowDeleteCommentConfirmation(true);
+  };
+
+  const confirmDeleteComment = () => {
+    if (task && commentToDelete) {
+      const updatedComments =
+        task.comments?.filter((comment) => comment._id !== commentToDelete) || [];
+      const updatedTask = {
+        ...task,
+        comments: updatedComments,
+      };
+
+      if (onEdit) {
+        onEdit(updatedTask);
+      }
+    }
+    setShowDeleteCommentConfirmation(false);
+    setCommentToDelete(null);
+  };
+
+  const cancelDeleteComment = () => {
+    setShowDeleteCommentConfirmation(false);
+    setCommentToDelete(null);
+  };
+
+  const handleCommentKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && e.ctrlKey) {
+      handleCreateComment();
+    } else if (e.key === "Escape") {
+      setIsCreatingComment(false);
+      setNewCommentText("");
+    }
+  };
+
+  const handleEditCommentKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && e.ctrlKey) {
+      handleSaveCommentEdit();
+    } else if (e.key === "Escape") {
+      handleCancelCommentEdit();
     }
   };
 
@@ -687,6 +804,148 @@ export default function TaskDetailModal({
                 </div>
               </div>
             )}
+
+            {/* Comentarios */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-medium text-gray-300">
+                  Comentarios ({task.comments?.length || 0})
+                </h3>
+                <button
+                  onClick={() => setIsCreatingComment(true)}
+                  disabled={isEditingTask}
+                  className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:opacity-50 text-white rounded transition-colors"
+                >
+                  + Agregar
+                </button>
+              </div>
+
+              {/* Lista de comentarios existentes */}
+              {task.comments && task.comments.length > 0 && (
+                <div className="space-y-3 mb-4">
+                  {task.comments.map((comment, index) => (
+                    <div
+                      key={comment._id || `comment-${index}`}
+                      className="bg-gray-700/30 rounded-lg p-3 border border-gray-600/30"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
+                            <span className="text-white text-xs font-medium">
+                              {typeof comment.author === "object"
+                                ? comment.author.name?.charAt(0)?.toUpperCase() || "U"
+                                : comment.author?.charAt(0)?.toUpperCase() || "U"}
+                            </span>
+                          </div>
+                          <span className="text-gray-300 text-sm font-medium">
+                            {typeof comment.author === "object"
+                              ? comment.author.name || comment.author.email
+                              : comment.author}
+                          </span>
+                          <span className="text-gray-500 text-xs">
+                            {formatDate(comment.createdAt)}
+                            {comment.updatedAt !== comment.createdAt && " (editado)"}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <button
+                            onClick={() => comment._id && handleEditComment(comment._id)}
+                            disabled={!comment._id}
+                            className="text-blue-400 hover:text-blue-300 p-1 rounded transition-colors disabled:opacity-50"
+                            title="Editar comentario"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => comment._id && handleDeleteComment(comment._id)}
+                            disabled={!comment._id}
+                            className="text-red-400 hover:text-red-300 p-1 rounded transition-colors disabled:opacity-50"
+                            title="Eliminar comentario"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+
+                      {editingCommentId === comment._id ? (
+                        <div className="space-y-2">
+                          <textarea
+                            value={editedCommentText}
+                            onChange={(e) => setEditedCommentText(e.target.value)}
+                            onKeyDown={handleEditCommentKeyPress}
+                            className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 resize-none"
+                            rows={2}
+                            placeholder="Editar comentario..."
+                          />
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={handleSaveCommentEdit}
+                              disabled={!editedCommentText.trim()}
+                              className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:opacity-50 text-white rounded transition-colors"
+                            >
+                              Guardar
+                            </button>
+                            <button
+                              onClick={handleCancelCommentEdit}
+                              className="px-2 py-1 text-xs text-gray-400 hover:text-white hover:bg-gray-700/50 rounded transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
+                          {comment.text}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Formulario para crear nuevo comentario */}
+              {isCreatingComment && (
+                <div className="bg-gray-700/20 rounded-lg p-4 border border-gray-600/50 mb-4">
+                  <h4 className="text-sm font-medium text-gray-300 mb-3">Nuevo Comentario</h4>
+                  <div className="space-y-3">
+                    <textarea
+                      value={newCommentText}
+                      onChange={(e) => setNewCommentText(e.target.value)}
+                      onKeyDown={handleCommentKeyPress}
+                      placeholder="Escribe tu comentario..."
+                      className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 resize-none"
+                      rows={3}
+                      autoFocus
+                    />
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={handleCreateComment}
+                        disabled={!newCommentText.trim()}
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:opacity-50 text-white text-sm rounded transition-colors"
+                      >
+                        Comentar
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsCreatingComment(false);
+                          setNewCommentText("");
+                        }}
+                        className="px-3 py-1.5 text-gray-400 hover:text-white hover:bg-gray-700/50 text-sm rounded transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Mensaje cuando no hay comentarios */}
+              {(!task.comments || task.comments.length === 0) && !isCreatingComment && (
+                <p className="text-gray-500 text-sm italic">
+                  No hay comentarios aún. Haz clic en &quot;Agregar&quot; para escribir el primero.
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Footer */}
@@ -930,6 +1189,65 @@ export default function TaskDetailModal({
                   </button>
                   <button
                     onClick={confirmDelete}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 font-medium"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Popup de confirmación de eliminación de comentario */}
+      {showDeleteCommentConfirmation && (
+        <div className="fixed inset-0 z-80 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-all duration-300" />
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div
+              className="relative w-full max-w-md mx-auto bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-2xl border border-red-500/50"
+              style={{
+                animation: "borderPulse 2s ease-in-out infinite",
+              }}
+            >
+              <style jsx>{`
+                @keyframes borderPulse {
+                  0%,
+                  100% {
+                    border-color: rgba(239, 68, 68, 0.5);
+                  }
+                  50% {
+                    border-color: rgba(239, 68, 68, 0.8);
+                  }
+                }
+              `}</style>
+              <div className="p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
+                    <span className="text-red-400 text-xl">💬</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">Eliminar comentario</h3>
+                    <p className="text-red-400 text-sm">Esta acción no se puede deshacer</p>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <p className="text-gray-300 leading-relaxed">
+                    ¿Estás seguro de que quieres eliminar este comentario?
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3">
+                  <button
+                    onClick={cancelDeleteComment}
+                    className="px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-700/50 border border-gray-600/50 hover:border-gray-500/50 rounded-lg transition-all duration-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmDeleteComment}
                     className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 font-medium"
                   >
                     Eliminar

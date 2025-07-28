@@ -211,6 +211,7 @@ export default function TaskBoard() {
         priority: updatedTask.priority,
         status: updatedTask.status, // Agregar status a la actualización
         subtasks: updatedTask.subtasks, // Agregar subtareas a la actualización
+        comments: updatedTask.comments, // Agregar comentarios a la actualización
       });
     } catch (error) {
       console.error("Error updating task:", error);

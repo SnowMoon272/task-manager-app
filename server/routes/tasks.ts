@@ -46,6 +46,7 @@ router.get("/", async (req: AuthenticatedRequest, res) => {
     const tasks = await Task.find(filter)
       .populate("assignee", "name email")
       .populate("creator", "name email")
+      .populate("comments.author", "name email")
       .sort({ createdAt: -1 });
 
     res.json({
@@ -66,7 +67,8 @@ router.get("/:id", async (req: AuthenticatedRequest, res) => {
   try {
     const task = await Task.findById(req.params.id)
       .populate("assignee", "name email")
-      .populate("creator", "name email");
+      .populate("creator", "name email")
+      .populate("comments.author", "name email");
 
     if (!task) {
       return res.status(404).json({
@@ -115,6 +117,7 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
     await task.save();
     await task.populate("assignee", "name email");
     await task.populate("creator", "name email");
+    await task.populate("comments.author", "name email");
 
     res.status(201).json({
       success: true,
@@ -133,7 +136,8 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
 // Update task
 router.put("/:id", async (req: AuthenticatedRequest, res) => {
   try {
-    const { title, description, status, priority, assignee, dueDate, tags, subtasks } = req.body;
+    const { title, description, status, priority, assignee, dueDate, tags, subtasks, comments } =
+      req.body;
     const userId = req.userId;
 
     console.log("Update task request:", {
@@ -141,6 +145,7 @@ router.put("/:id", async (req: AuthenticatedRequest, res) => {
       userId,
       body: req.body,
       subtasks: subtasks ? `${subtasks.length} subtasks` : "no subtasks",
+      comments: comments ? `${comments.length} comments` : "no comments",
     });
 
     const task = await Task.findById(req.params.id);
@@ -195,6 +200,26 @@ router.put("/:id", async (req: AuthenticatedRequest, res) => {
       console.log("Processed subtasks:", validSubtasks);
     }
 
+    // Manejo especial para comentarios
+    if (comments !== undefined) {
+      const validComments = comments
+        .filter((comment: any) => comment && comment.text && comment.text.trim() && comment.author)
+        .map((comment: any) => {
+          const isTemporaryId = comment._id && comment._id.startsWith("temp-");
+          const commentData: any = {
+            text: comment.text.trim(),
+            author: comment.author,
+          };
+          if (comment._id && !isTemporaryId) {
+            commentData._id = comment._id;
+          }
+          return commentData;
+        });
+
+      updateData.comments = validComments;
+      console.log("Processed comments:", validComments);
+    }
+
     console.log("Final update data:", updateData);
 
     const updatedTask = await Task.findByIdAndUpdate(req.params.id, updateData, {
@@ -202,7 +227,8 @@ router.put("/:id", async (req: AuthenticatedRequest, res) => {
       runValidators: true,
     })
       .populate("assignee", "name email")
-      .populate("creator", "name email");
+      .populate("creator", "name email")
+      .populate("comments.author", "name email");
 
     res.json({
       success: true,
@@ -325,6 +351,7 @@ router.post("/:id/subtasks", async (req: AuthenticatedRequest, res) => {
     await task.save();
     await task.populate("assignee", "name email");
     await task.populate("creator", "name email");
+    await task.populate("comments.author", "name email");
 
     res.status(201).json({
       success: true,
@@ -384,6 +411,7 @@ router.put("/:id/subtasks/:subtaskId", async (req: AuthenticatedRequest, res) =>
     await task.save();
     await task.populate("assignee", "name email");
     await task.populate("creator", "name email");
+    await task.populate("comments.author", "name email");
 
     res.json({
       success: true,
@@ -431,6 +459,7 @@ router.delete("/:id/subtasks/:subtaskId", async (req: AuthenticatedRequest, res)
     await task.save();
     await task.populate("assignee", "name email");
     await task.populate("creator", "name email");
+    await task.populate("comments.author", "name email");
 
     res.json({
       success: true,

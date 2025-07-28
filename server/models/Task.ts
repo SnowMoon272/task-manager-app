@@ -6,6 +6,14 @@ export interface ISubtask {
   createdAt: Date;
 }
 
+export interface IComment {
+  _id?: mongoose.Types.ObjectId;
+  text: string;
+  author: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface ITask extends Document {
   title: string;
   description?: string;
@@ -14,6 +22,7 @@ export interface ITask extends Document {
   assignee?: mongoose.Types.ObjectId;
   creator: mongoose.Types.ObjectId;
   subtasks: ISubtask[];
+  comments: IComment[];
   dueDate?: Date;
   tags: string[];
   createdAt: Date;
@@ -33,6 +42,25 @@ const SubtaskSchema: Schema = new Schema(
     completed: {
       type: Boolean,
       default: false,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
+
+const CommentSchema: Schema = new Schema(
+  {
+    text: {
+      type: String,
+      required: [true, "Comment text is required"],
+      trim: true,
+      maxlength: [1000, "Comment cannot exceed 1000 characters"],
+    },
+    author: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: [true, "Comment author is required"],
     },
   },
   {
@@ -73,6 +101,7 @@ const TaskSchema: Schema = new Schema(
       required: [true, "Task creator is required"],
     },
     subtasks: [SubtaskSchema],
+    comments: [CommentSchema],
     dueDate: {
       type: Date,
     },

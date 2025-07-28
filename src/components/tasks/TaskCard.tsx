@@ -173,20 +173,31 @@ export default function TaskCard({ task, onEdit, onDelete, onTaskClick }: TaskCa
       <div className="flex items-center justify-between text-xs text-gray-500">
         <span className="truncate">{getTimeAgo(task.createdAt)}</span>
 
-        {task.dueDate && (
-          <span
-            className={`
-            px-2 py-0.5 rounded-full
-            ${
-              new Date(task.dueDate) < new Date()
-                ? "bg-red-500/20 text-red-400"
-                : "bg-blue-500/20 text-blue-400"
-            }
-          `}
-          >
-            {formatDate(task.dueDate)}
-          </span>
-        )}
+        <div className="flex items-center space-x-2">
+          {/* Indicador de comentarios */}
+          {task.comments && task.comments.length > 0 && (
+            <div className="flex items-center space-x-1 text-blue-400">
+              <span>💬</span>
+              <span>{task.comments.length}</span>
+            </div>
+          )}
+
+          {/* Fecha de vencimiento */}
+          {task.dueDate && (
+            <span
+              className={`
+              px-2 py-0.5 rounded-full
+              ${
+                new Date(task.dueDate) < new Date()
+                  ? "bg-red-500/20 text-red-400"
+                  : "bg-blue-500/20 text-blue-400"
+              }
+            `}
+            >
+              {formatDate(task.dueDate)}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Indicador de arrastre */}
