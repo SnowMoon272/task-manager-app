@@ -94,7 +94,7 @@ router.post("/login", async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Email and password are required",
+        message: "Email y contraseña son requeridos",
       });
     }
 
@@ -102,7 +102,7 @@ router.post("/login", async (req, res) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Invalid credentials",
+        message: "Credenciales incorrectas. Verifica tu email y contraseña.",
       });
     }
 
@@ -110,7 +110,7 @@ router.post("/login", async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: "Invalid credentials",
+        message: "Credenciales incorrectas. Verifica tu email y contraseña.",
       });
     }
 

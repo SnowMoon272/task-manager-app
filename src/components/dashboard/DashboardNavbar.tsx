@@ -70,7 +70,7 @@ export default function DashboardNavbar() {
             <div className="hidden lg:flex ml-6">
               <div className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 backdrop-blur-sm border border-cyan-400/20 rounded-full px-3 py-1">
                 <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                <span className="text-xs text-gray-300 font-medium">Conectado</span>
+                <span className="text-xs text-gray-300 font-medium">PRUEBA TÉCNICA T1</span>
               </div>
             </div>
           </div>

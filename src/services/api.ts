@@ -114,12 +114,34 @@ const request = async <T = unknown>(
         //   window.location.href = "/login";
         // }
       }
-      throw new Error(data.message || "Something went wrong");
+
+      // Personalizar el mensaje de error según el status
+      let errorMessage = data.message || "Ha ocurrido un error";
+
+      if (response.status === 401 && endpoint === "/auth/login") {
+        errorMessage = data.message || "Credenciales incorrectas. Verifica tu email y contraseña.";
+      } else if (response.status === 500) {
+        errorMessage = "Error del servidor. Inténtalo de nuevo más tarde.";
+      } else if (response.status === 400) {
+        errorMessage = data.message || "Datos inválidos. Verifica la información ingresada.";
+      }
+
+      throw new Error(errorMessage);
     }
 
     return data;
   } catch (error) {
     console.error("API Error:", error);
+
+    // Mejorar los mensajes de error de red
+    if (error instanceof TypeError && error.message.includes("fetch")) {
+      throw new Error("Error de conexión. Verifica tu conexión a internet e inténtalo de nuevo.");
+    }
+
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("La solicitud fue cancelada. Inténtalo de nuevo.");
+    }
+
     throw error;
   }
 };

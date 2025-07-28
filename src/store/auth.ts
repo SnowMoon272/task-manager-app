@@ -68,11 +68,25 @@ export const useAuthStore = create<AuthState>()(
               isLoading: false,
             });
           } else {
-            throw new Error(response.message || "Error al iniciar sesión");
+            throw new Error(
+              response.message || "Credenciales incorrectas. Verifica tu email y contraseña.",
+            );
           }
         } catch (error) {
           set({ isLoading: false });
-          throw error;
+
+          // Mejorar el mensaje de error si es necesario
+          if (error instanceof Error) {
+            if (
+              error.message.toLowerCase().includes("fetch") ||
+              error.message.toLowerCase().includes("network")
+            ) {
+              throw new Error("Error de conexión. Verifica tu conexión a internet.");
+            }
+            throw error;
+          }
+
+          throw new Error("Credenciales incorrectas. Verifica tu email y contraseña.");
         }
       },
 

@@ -4,6 +4,7 @@ import "./globals.css";
 import { StoreInitializer } from "@/components/providers/StoreInitializer";
 import RouteGuard from "@/components/guards/RouteGuard";
 import StarField from "@/components/ui/StarField";
+import { ModalProvider } from "@/contexts/ModalContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,9 +32,11 @@ export default function RootLayout({
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black relative">
           <StarField />
           <div className="relative z-10 min-h-screen">
-            <StoreInitializer>
-              <RouteGuard>{children}</RouteGuard>
-            </StoreInitializer>
+            <ModalProvider>
+              <StoreInitializer>
+                <RouteGuard>{children}</RouteGuard>
+              </StoreInitializer>
+            </ModalProvider>
           </div>
         </div>
       </body>

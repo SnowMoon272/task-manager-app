@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 
 interface LoginFormProps {
@@ -14,15 +14,19 @@ export default function LoginForm({ onSubmit, isLoading, error }: LoginFormProps
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await onSubmit(email, password);
-  };
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      await onSubmit(email, password);
+    },
+    [email, password, onSubmit],
+  );
 
   return (
     <form
       className="mt-8 space-y-6 bg-gray-800/30 backdrop-blur-sm p-8 rounded-xl border border-purple-500/30"
       onSubmit={handleSubmit}
+      autoComplete="new-password"
     >
       <div className="rounded-md shadow-sm space-y-4">
         <div>
@@ -33,7 +37,7 @@ export default function LoginForm({ onSubmit, isLoading, error }: LoginFormProps
             id="email"
             name="email"
             type="email"
-            autoComplete="email"
+            autoComplete="new-password"
             required
             className="relative block w-full px-3 py-2 bg-gray-700/50 border border-gray-600 placeholder-gray-400 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 sm:text-sm backdrop-blur-sm"
             placeholder="Ingresa tu email"
@@ -50,7 +54,7 @@ export default function LoginForm({ onSubmit, isLoading, error }: LoginFormProps
               id="password"
               name="password"
               type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
+              autoComplete="new-password"
               required
               className="relative block w-full px-3 py-2 pr-10 bg-gray-700/50 border border-gray-600 placeholder-gray-400 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 sm:text-sm backdrop-blur-sm"
               placeholder="Ingresa tu contraseña"
