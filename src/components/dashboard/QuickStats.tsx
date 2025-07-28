@@ -57,7 +57,6 @@ export default function QuickStats({ todoTasks, inProgressTasks, doneTasks }: Qu
             key={stat.id}
             className={`group relative bg-gray-800/30 backdrop-blur-sm border ${stat.borderColor} ${stat.hoverBorderColor} rounded-lg p-3 sm:p-4 transition-all duration-300 hover:shadow-lg`}
           >
-            {/* Indicador de color sutil */}
             <div
               className={`absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-${stat.color}-400/50 to-transparent`}
             ></div>
@@ -74,13 +73,11 @@ export default function QuickStats({ todoTasks, inProgressTasks, doneTasks }: Qu
                     <p className="text-xs sm:text-sm font-medium text-gray-400 mb-0.5">
                       {stat.name}
                     </p>
-                    <p className="text-xl sm:text-2xl font-bold text-white">{stat.value}</p>
                   </div>
                 </div>
               </div>
 
-              {/* Número grande como elemento decorativo */}
-              <div className="hidden lg:block text-4xl xl:text-5xl font-black text-gray-700/10 select-none">
+              <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-300/80 select-none">
                 {stat.value}
               </div>
             </div>

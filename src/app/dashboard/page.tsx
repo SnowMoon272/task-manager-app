@@ -60,7 +60,7 @@ export default function DashboardPage() {
           />
 
           {/* Tablero de tareas */}
-          <div className="border-2 border-purple-500/30 bg-gray-800/30 backdrop-blur-sm rounded-lg p-6">
+          <div className="border-2 border-purple-500/30 bg-gray-800/30 backdrop-blur-sm rounded-lg">
             <TaskBoardContainer onModalStatesChange={setModalStates} />
           </div>
         </div>

@@ -270,7 +270,7 @@ export default function TaskBoardContainer({
   // Mostrar mensaje de error si existe
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black p-4 sm:p-6 lg:p-8">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black p-4 sm:p-6 lg:p-8 overflow-hidden rounded-lg">
         <div className="max-w-7xl mx-auto">
           <div className="text-center py-20">
             <div className="text-6xl mb-4">⚠️</div>
@@ -289,7 +289,7 @@ export default function TaskBoardContainer({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black p-4 sm:p-6 lg:p-8 overflow-hidden rounded-lg">
       <div className="max-w-7xl mx-auto">
         {/* Header del TaskBoard */}
         <TaskBoardHeader

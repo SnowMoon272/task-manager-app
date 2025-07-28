@@ -49,7 +49,8 @@ export default function TaskHeader({
 }: TaskHeaderProps) {
   if (isEditing) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 md:space-y-6">
+        {/* Título - Responsivo */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">Título</label>
           <input
@@ -57,18 +58,20 @@ export default function TaskHeader({
             value={editedTitle}
             onChange={(e) => onTitleChange(e.target.value)}
             onKeyDown={onKeyPress}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full px-3 py-2 md:px-4 md:py-3 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm md:text-base"
+            placeholder="Escribe el título de la tarea..."
             autoFocus
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        {/* Estado y Prioridad - Layout Responsivo */}
+        <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Estado</label>
             <select
               value={editedStatus}
               onChange={(e) => onStatusChange(e.target.value as "todo" | "in-progress" | "done")}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-3 py-2 md:px-4 md:py-3 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm md:text-base"
             >
               <option value="todo">📝 Pendiente</option>
               <option value="in-progress">⏳ En progreso</option>
@@ -81,7 +84,7 @@ export default function TaskHeader({
             <select
               value={editedPriority}
               onChange={(e) => onPriorityChange(e.target.value as "low" | "medium" | "high")}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-3 py-2 md:px-4 md:py-3 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm md:text-base"
             >
               <option value="low">🟢 Baja</option>
               <option value="medium">🟡 Media</option>
@@ -94,20 +97,36 @@ export default function TaskHeader({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center space-x-4">
-        <h2 className="text-xl font-semibold text-white">{task.title}</h2>
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[task.status]}`}>
-          {statusLabels[task.status]}
-        </span>
-        <span
-          className={`px-2 py-1 rounded border text-xs font-medium flex items-center ${
-            priorityColors[task.priority]
-          }`}
-        >
-          {priorityIcons[task.priority]}{" "}
-          {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-        </span>
+    <div className="space-y-3 md:space-y-4">
+      {/* Título responsivo */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-white break-words pr-2">
+          {task.title}
+        </h2>
+
+        {/* Badges responsivos */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
+          <span
+            className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
+              statusColors[task.status]
+            }`}
+          >
+            {statusLabels[task.status]}
+          </span>
+          <span
+            className={`px-2 py-1 rounded border text-xs font-medium flex items-center gap-1 ${
+              priorityColors[task.priority]
+            }`}
+          >
+            <span className="text-xs">{priorityIcons[task.priority]}</span>
+            <span className="hidden sm:inline">
+              {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+            </span>
+            <span className="sm:hidden">
+              {task.priority === "low" ? "Baja" : task.priority === "medium" ? "Media" : "Alta"}
+            </span>
+          </span>
+        </div>
       </div>
     </div>
   );

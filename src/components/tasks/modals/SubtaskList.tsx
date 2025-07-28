@@ -42,13 +42,13 @@ export default function SubtaskList({
             </span>
           </div>
 
-          {/* Botón eliminar - solo visible en hover */}
+          {/* Botón eliminar - visible en mobile, hover en desktop */}
           <button
             onClick={(e) => {
               e.stopPropagation(); // Prevenir que se active el toggle
               onDeleteSubtask(index, subtask.title);
             }}
-            className="ml-2 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1 rounded transition-all duration-200 pointer-events-auto"
+            className="ml-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1 rounded transition-all duration-200 pointer-events-auto"
             title="Eliminar subtarea"
           >
             🗑️
