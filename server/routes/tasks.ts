@@ -13,6 +13,54 @@ interface TaskFilter {
   assignee?: string;
 }
 
+interface SubtaskInput {
+  title: string;
+  completed?: boolean;
+}
+
+interface CommentInput {
+  _id?: string;
+  text: string;
+  author: string;
+}
+
+interface ProcessedComment {
+  _id?: string;
+  text: string;
+  author: string;
+}
+
+interface UpdateTaskBody {
+  title?: string;
+  description?: string;
+  status?: string;
+  priority?: string;
+  assignee?: string;
+  dueDate?: string;
+  tags?: string[];
+  subtasks?: SubtaskInput[];
+  comments?: CommentInput[];
+}
+
+interface CreateTaskBody {
+  title: string;
+  description?: string;
+  status?: string;
+  priority?: string;
+  assignee?: string;
+  dueDate?: string;
+  tags?: string[];
+}
+
+interface AddSubtaskBody {
+  title: string;
+}
+
+interface UpdateSubtaskBody {
+  title?: string;
+  completed?: boolean;
+}
+
 const router = Router();
 
 // Apply authentication middleware to all routes
@@ -93,7 +141,8 @@ router.get("/:id", async (req: AuthenticatedRequest, res) => {
 // Create new task
 router.post("/", async (req: AuthenticatedRequest, res) => {
   try {
-    const { title, description, status, priority, assignee, dueDate, tags } = req.body;
+    const { title, description, status, priority, assignee, dueDate, tags }: CreateTaskBody =
+      req.body;
     const userId = req.userId;
 
     if (!title) {
@@ -136,8 +185,17 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
 // Update task
 router.put("/:id", async (req: AuthenticatedRequest, res) => {
   try {
-    const { title, description, status, priority, assignee, dueDate, tags, subtasks, comments } =
-      req.body;
+    const {
+      title,
+      description,
+      status,
+      priority,
+      assignee,
+      dueDate,
+      tags,
+      subtasks,
+      comments,
+    }: UpdateTaskBody = req.body;
     const userId = req.userId;
 
     console.log("Update task request:", {
@@ -190,8 +248,8 @@ router.put("/:id", async (req: AuthenticatedRequest, res) => {
     if (subtasks !== undefined) {
       // Filtrar subtareas válidas y extraer solo los campos necesarios
       const validSubtasks = subtasks
-        .filter((st: { title?: string; completed?: boolean }) => st && st.title && st.title.trim())
-        .map((st: { title: string; completed?: boolean }) => ({
+        .filter((st: SubtaskInput) => st && st.title && st.title.trim())
+        .map((st: SubtaskInput) => ({
           title: st.title.trim(),
           completed: Boolean(st.completed),
         }));
@@ -203,10 +261,13 @@ router.put("/:id", async (req: AuthenticatedRequest, res) => {
     // Manejo especial para comentarios
     if (comments !== undefined) {
       const validComments = comments
-        .filter((comment: any) => comment && comment.text && comment.text.trim() && comment.author)
-        .map((comment: any) => {
+        .filter(
+          (comment: CommentInput) =>
+            comment && comment.text && comment.text.trim() && comment.author,
+        )
+        .map((comment: CommentInput): ProcessedComment => {
           const isTemporaryId = comment._id && comment._id.startsWith("temp-");
-          const commentData: any = {
+          const commentData: ProcessedComment = {
             text: comment.text.trim(),
             author: comment.author,
           };
@@ -315,7 +376,7 @@ router.delete("/:id", async (req: AuthenticatedRequest, res) => {
 // Add subtask
 router.post("/:id/subtasks", async (req: AuthenticatedRequest, res) => {
   try {
-    const { title } = req.body;
+    const { title }: AddSubtaskBody = req.body;
     const userId = req.userId;
 
     if (!title) {
@@ -370,7 +431,7 @@ router.post("/:id/subtasks", async (req: AuthenticatedRequest, res) => {
 // Update subtask
 router.put("/:id/subtasks/:subtaskId", async (req: AuthenticatedRequest, res) => {
   try {
-    const { title, completed } = req.body;
+    const { title, completed }: UpdateSubtaskBody = req.body;
     const userId = req.userId;
 
     const task = await Task.findById(req.params.id);

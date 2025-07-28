@@ -1,14 +1,36 @@
-import { Router } from "express";
+import { Router, Request } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import User, { IUser } from "../models/User";
+import User from "../models/User";
 import { authenticateToken } from "../middleware/auth";
+
+interface RegisterBody {
+  email: string;
+  password: string;
+  name: string;
+}
+
+interface LoginBody {
+  email: string;
+  password: string;
+}
+
+interface JwtPayload {
+  userId: string;
+  email: string;
+  iat?: number;
+  exp?: number;
+}
+
+interface AuthenticatedRequest extends Request {
+  userId?: string;
+}
 
 const router = Router();
 
 router.post("/register", async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const { email, password, name }: RegisterBody = req.body;
 
     // Validate input
     if (!email || !password || !name) {
@@ -67,7 +89,7 @@ router.post("/register", async (req, res) => {
 
 router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password }: LoginBody = req.body;
 
     if (!email || !password) {
       return res.status(400).json({
@@ -131,7 +153,7 @@ router.get("/me", async (req, res) => {
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback-secret") as any;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback-secret") as JwtPayload;
     const user = await User.findById(decoded.userId).select("-password");
 
     if (!user) {
@@ -153,7 +175,7 @@ router.get("/me", async (req, res) => {
         },
       },
     });
-  } catch (error) {
+  } catch {
     res.status(401).json({
       success: false,
       message: "Invalid token",
@@ -162,9 +184,9 @@ router.get("/me", async (req, res) => {
 });
 
 // Refresh token endpoint
-router.post("/refresh", authenticateToken, async (req, res) => {
+router.post("/refresh", authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
-    const userId = (req as any).userId;
+    const userId = req.userId;
     const user = await User.findById(userId);
 
     if (!user) {
