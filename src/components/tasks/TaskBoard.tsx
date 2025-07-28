@@ -18,8 +18,7 @@ import { useTasksStore } from "@/store/tasks";
 import { useAuthStore } from "@/store/auth";
 import TaskColumn from "./TaskColumn";
 import TaskCard from "./TaskCard";
-import CreateTaskModal from "./CreateTaskModal";
-import TaskDetailModal from "./TaskDetailModal";
+import { CreateTaskModal, TaskDetailModal } from "./modals";
 import TaskBoardHeader, { TaskFilters } from "./TaskBoardHeader";
 import ConfirmationModal from "../ui/ConfirmationModal";
 

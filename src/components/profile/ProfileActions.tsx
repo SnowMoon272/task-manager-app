@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import SpaceButton from "@/components/ui/SpaceButton";
-import EditProfileModal from "./EditProfileModal";
-import ChangePasswordModal from "./ChangePasswordModal";
+import { EditProfileModal, ChangePasswordModal } from "./modals";
 import { useAuthStore } from "@/store/auth";
 
 interface ProfileActionsProps {
