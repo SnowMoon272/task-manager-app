@@ -4,13 +4,20 @@ import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Task } from "@/types";
 import TaskCard from "./TaskCard";
+import { ForwardRefExoticComponent, SVGProps, RefAttributes } from "react";
 
 interface TaskColumnProps {
   id: string;
   title: string;
   tasks: Task[];
-  emoji: string;
+  icon: ForwardRefExoticComponent<
+    Omit<SVGProps<SVGSVGElement>, "ref"> & {
+      title?: string | undefined;
+      titleId?: string | undefined;
+    } & RefAttributes<SVGSVGElement>
+  >;
   color: string;
+  iconColor?: string;
   onEdit?: (task: Task) => void;
   onDelete?: (taskId: string) => void;
   onTaskClick?: (task: Task) => void;
@@ -20,8 +27,9 @@ export default function TaskColumn({
   id,
   title,
   tasks,
-  emoji,
+  icon: Icon,
   color,
+  iconColor = "text-gray-400",
   onEdit,
   onDelete,
   onTaskClick,
@@ -45,7 +53,7 @@ export default function TaskColumn({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <span className="text-lg">{emoji}</span>
+            <Icon className={`h-5 w-5 ${iconColor}`} />
             <h3 className="font-semibold text-white">{title}</h3>
           </div>
           <span className="text-sm text-white/80 bg-white/20 px-2 py-1 rounded-full">
