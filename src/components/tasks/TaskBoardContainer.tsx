@@ -12,8 +12,17 @@ import TaskBoardHeader, { TaskFilters } from "./TaskBoardHeader";
 export default function TaskBoardContainer() {
   // Store hooks
   const { user } = useAuthStore();
-  const { tasks, isLoading, error, fetchTasks, createTask, updateTask, deleteTask, clearTasks } =
-    useTasksStore();
+  const {
+    tasks,
+    isLoading,
+    error,
+    fetchTasks,
+    createTask,
+    updateTask,
+    deleteTask,
+    clearTasks,
+    moveTask,
+  } = useTasksStore();
 
   // Estados locales
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -26,6 +35,9 @@ export default function TaskBoardContainer() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showIncompleteSubtasksAlert, setShowIncompleteSubtasksAlert] = useState(false);
+  const [alertTask, setAlertTask] = useState<Task | null>(null);
 
   // Effects
   useEffect(() => {
@@ -113,10 +125,54 @@ export default function TaskBoardContainer() {
 
   // Handler para drag and drop
   const handleDragEnd = async (taskId: string, newStatus: "todo" | "in-progress" | "done") => {
+    // Obtener la tarea antes de cualquier operación
+    const task = tasks.find((t) => t._id === taskId);
+
+    if (!task) {
+      console.error("Tarea no encontrada:", taskId);
+      return;
+    }
+
+    // VALIDACIÓN PREVIA: Verificar si se intenta completar una tarea con subtareas pendientes
+    if (newStatus === "done" && task.subtasks && task.subtasks.length > 0) {
+      const pendingSubtasks = task.subtasks.filter((subtask) => !subtask.completed);
+      if (pendingSubtasks.length > 0) {
+        console.log("Bloqueando movimiento - subtareas pendientes detectadas");
+        // Mostrar modal de alerta INMEDIATAMENTE sin hacer la petición
+        setAlertTask(task);
+        setShowIncompleteSubtasksAlert(true);
+        return; // No proceder con la petición
+      }
+    }
+
+    // Si llegamos aquí, la validación pasó - proceder con la petición
     try {
-      await updateTask(taskId, { status: newStatus });
+      await moveTask(taskId, newStatus);
     } catch (error) {
       console.error("Error updating task status:", error);
+
+      // Este catch es para otros errores no relacionados con subtareas
+      const errorMsg =
+        error instanceof Error ? error.message : "Error al actualizar el estado de la tarea";
+
+      console.log("Error capturado:", errorMsg);
+      console.log("Mostrando modal de error genérico");
+
+      // Mostrar modal de error genérico para otros errores
+      let formattedMsg = errorMsg;
+
+      // Formatear el mensaje si es muy largo
+      if (formattedMsg.length > 150) {
+        if (formattedMsg.includes(": ")) {
+          const [mainMessage, subtasksList] = formattedMsg.split(": ");
+          formattedMsg = `${mainMessage}.\n\nSubtareas pendientes:\n${subtasksList
+            .split(", ")
+            .map((name) => `• ${name}`)
+            .join("\n")}`;
+        }
+      }
+
+      setErrorMessage(formattedMsg);
     }
   };
 
@@ -206,6 +262,14 @@ export default function TaskBoardContainer() {
           taskToDelete={taskToDelete}
           onCloseDeleteModal={() => setTaskToDelete(null)}
           onConfirmDelete={handleConfirmDelete}
+          errorMessage={errorMessage}
+          onCloseErrorModal={() => setErrorMessage(null)}
+          showIncompleteSubtasksAlert={showIncompleteSubtasksAlert}
+          alertTask={alertTask}
+          onCloseIncompleteSubtasksAlert={() => {
+            setShowIncompleteSubtasksAlert(false);
+            setAlertTask(null);
+          }}
         />
       </div>
     </div>

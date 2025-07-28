@@ -20,26 +20,35 @@ export default function SubtaskList({
       {subtasks.map((subtask, index) => (
         <div
           key={subtask._id || index}
-          className="flex items-center justify-between p-3 bg-gray-700/30 rounded-lg border border-gray-600"
+          className="group flex items-center justify-between py-1.5 px-3 bg-gray-700/30 hover:bg-gray-700/50 rounded-md border border-gray-600/50 hover:border-gray-500/50 transition-all duration-200 cursor-pointer"
+          onClick={() => onToggleSubtask(index)}
         >
-          <div className="flex items-center flex-1">
-            <input
-              type="checkbox"
-              checked={subtask.completed}
-              onChange={() => onToggleSubtask(index)}
-              className="mr-3 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-            />
+          <div className="flex items-center flex-1 pointer-events-none">
+            {/* Icono de estado */}
+            <div className="mr-3 flex items-center justify-center w-5 h-5">
+              {subtask.completed ? (
+                <span className="text-green-400 text-sm">✅</span>
+              ) : (
+                <span className="text-yellow-400 text-sm">⭕</span>
+              )}
+            </div>
+
             <span
-              className={`flex-1 ${
+              className={`flex-1 transition-all duration-200 ${
                 subtask.completed ? "line-through text-gray-400" : "text-white"
               }`}
             >
               {subtask.title}
             </span>
           </div>
+
+          {/* Botón eliminar - solo visible en hover */}
           <button
-            onClick={() => onDeleteSubtask(index, subtask.title)}
-            className="ml-2 text-red-400 hover:text-red-300 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation(); // Prevenir que se active el toggle
+              onDeleteSubtask(index, subtask.title);
+            }}
+            className="ml-2 opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1 rounded transition-all duration-200 pointer-events-auto"
             title="Eliminar subtarea"
           >
             🗑️

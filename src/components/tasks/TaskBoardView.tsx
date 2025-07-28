@@ -86,15 +86,24 @@ export default function TaskBoardView({
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (!over) return;
+    if (!over) {
+      setActiveTask(null);
+      return;
+    }
 
     const activeId = active.id;
     const overId = over.id;
 
-    if (activeId === overId) return;
+    if (activeId === overId) {
+      setActiveTask(null);
+      return;
+    }
 
     const activeTask = tasks.find((task) => task._id === activeId);
-    if (!activeTask) return;
+    if (!activeTask) {
+      setActiveTask(null);
+      return;
+    }
 
     let newStatus: "todo" | "in-progress" | "done" | null = null;
 

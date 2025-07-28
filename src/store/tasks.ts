@@ -107,14 +107,14 @@ export const useTasksStore = create<TasksState>((set, get) => ({
   },
 
   moveTask: async (taskId, newStatus) => {
-    try {
-      // Actualización optimista
-      const currentTasks = get().tasks;
-      const updatedTasks = currentTasks.map((task) =>
-        task._id === taskId ? { ...task, status: newStatus } : task,
-      );
-      set({ tasks: updatedTasks });
+    // Actualización optimista
+    const currentTasks = get().tasks;
+    const updatedTasks = currentTasks.map((task) =>
+      task._id === taskId ? { ...task, status: newStatus } : task,
+    );
+    set({ tasks: updatedTasks });
 
+    try {
       // Llamada a la API
       const response = await apiUpdateTask(taskId, { status: newStatus });
       if (!response.success) {
@@ -124,9 +124,11 @@ export const useTasksStore = create<TasksState>((set, get) => ({
       }
     } catch (error) {
       console.error("Error moving task:", error);
+      // Revertir cambios optimistas
+      set({ tasks: currentTasks });
       set({ error: "Error al mover la tarea" });
-      // Refrescar las tareas desde el servidor
-      get().fetchTasks();
+      // Relanzar el error para que el componente lo pueda capturar
+      throw error;
     }
   },
 
