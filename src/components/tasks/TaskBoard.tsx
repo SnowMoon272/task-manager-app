@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import {
   DndContext,
   DragEndEvent,
-  DragOverEvent,
   DragOverlay,
   DragStartEvent,
   PointerSensor,
@@ -57,6 +56,8 @@ export default function TaskBoard() {
   const [filters, setFilters] = useState<TaskFilters>({ priority: null, status: null });
   const [showIncompleteSubtasksAlert, setShowIncompleteSubtasksAlert] = useState(false);
   const [alertTask, setAlertTask] = useState<Task | null>(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
   // Algoritmo de detección de colisiones personalizado
   const customCollisionDetection: CollisionDetection = (args) => {
@@ -140,77 +141,41 @@ export default function TaskBoard() {
     const activeTask = tasks.find((task) => task._id === activeId);
     if (!activeTask) return;
 
-    // Si se está moviendo sobre una columna
-    if (over.data.current?.type === "column") {
-      const newStatus = over.data.current?.status as "todo" | "in-progress" | "done";
-      if (newStatus && activeTask.status !== newStatus) {
-        // Verificar si se está intentando mover a "done" con subtareas pendientes
-        if (newStatus === "done" && hasIncompleteSubtasks(activeTask)) {
-          setAlertTask(activeTask);
-          setShowIncompleteSubtasksAlert(true);
-          setActiveTask(null);
-          return;
-        }
+    let newStatus: "todo" | "in-progress" | "done" | null = null;
 
-        await moveTask(activeTask._id, newStatus);
+    // Determinar el nuevo estado basado en dónde se soltó
+    if (over.data.current?.type === "column") {
+      // Se soltó sobre una columna
+      newStatus = over.data.current?.status as "todo" | "in-progress" | "done";
+    } else if (over.data.current?.type === "task") {
+      // Se soltó sobre otra tarea
+      const overTask = tasks.find((task) => task._id === overId);
+      if (overTask) {
+        newStatus = overTask.status;
       }
+    }
+
+    // Solo proceder si hay un cambio de estado
+    if (newStatus && activeTask.status !== newStatus) {
+      // Verificar si se está intentando mover a "done" con subtareas pendientes
+      if (newStatus === "done" && hasIncompleteSubtasks(activeTask)) {
+        setAlertTask(activeTask);
+        setShowIncompleteSubtasksAlert(true);
+        setActiveTask(null);
+        return;
+      }
+
+      // Ejecutar el movimiento de la tarea
+      await moveTask(activeTask._id, newStatus);
     }
 
     setActiveTask(null);
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-
-    if (!over) return;
-
-    const activeId = active.id;
-    const overId = over.id;
-
-    if (activeId === overId) return;
-
-    const isActiveTask = active.data.current?.type === "task";
-    const isOverTask = over.data.current?.type === "task";
-    const isOverColumn = over.data.current?.type === "column";
-
-    if (!isActiveTask) return;
-
-    // Dropping a task over another task
-    if (isActiveTask && isOverTask) {
-      const activeTask = tasks.find((task) => task._id === activeId);
-      const overTask = tasks.find((task) => task._id === overId);
-
-      if (!activeTask || !overTask) return;
-
-      if (activeTask.status !== overTask.status) {
-        // Verificar si se está intentando mover a "done" con subtareas pendientes
-        if (overTask.status === "done" && hasIncompleteSubtasks(activeTask)) {
-          setAlertTask(activeTask);
-          setShowIncompleteSubtasksAlert(true);
-          return;
-        }
-
-        moveTask(activeTask._id, overTask.status);
-      }
-    }
-
-    // Dropping a task over a column
-    if (isActiveTask && isOverColumn) {
-      const activeTask = tasks.find((task) => task._id === activeId);
-      if (!activeTask) return;
-
-      const newStatus = over.data.current?.status as "todo" | "in-progress" | "done";
-      if (newStatus && activeTask.status !== newStatus) {
-        // Verificar si se está intentando mover a "done" con subtareas pendientes
-        if (newStatus === "done" && hasIncompleteSubtasks(activeTask)) {
-          setAlertTask(activeTask);
-          setShowIncompleteSubtasksAlert(true);
-          return;
-        }
-
-        moveTask(activeTask._id, newStatus);
-      }
-    }
+  const handleDragOver = () => {
+    // Mantenemos los efectos visuales del drag sin hacer llamadas al servidor
+    // Los efectos visuales se manejan automáticamente por @dnd-kit
+    // La actualización real se ejecuta solo en handleDragEnd
   };
 
   const handleCreateTask = async (taskData: CreateTaskData) => {
@@ -218,9 +183,24 @@ export default function TaskBoard() {
   };
 
   const handleDeleteTask = async (taskId: string) => {
-    if (confirm("¿Estás seguro de que quieres eliminar esta tarea?")) {
-      await deleteTask(taskId);
+    const task = tasks.find((t) => t._id === taskId);
+    if (task) {
+      setTaskToDelete(task);
+      setShowDeleteConfirmation(true);
     }
+  };
+
+  const confirmDelete = async () => {
+    if (taskToDelete) {
+      await deleteTask(taskToDelete._id);
+    }
+    setShowDeleteConfirmation(false);
+    setTaskToDelete(null);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirmation(false);
+    setTaskToDelete(null);
   };
 
   const handleEditTask = async (updatedTask: Task) => {
@@ -229,6 +209,7 @@ export default function TaskBoard() {
         title: updatedTask.title,
         description: updatedTask.description,
         priority: updatedTask.priority,
+        status: updatedTask.status, // Agregar status a la actualización
         subtasks: updatedTask.subtasks, // Agregar subtareas a la actualización
       });
     } catch (error) {
@@ -496,6 +477,79 @@ export default function TaskBoard() {
                     className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 font-medium"
                   >
                     Entendido
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Popup de confirmación de eliminación */}
+      {showDeleteConfirmation && taskToDelete && (
+        <div className="fixed inset-0 z-80 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-all duration-300" />
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div
+              className="relative w-full max-w-md mx-auto bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-2xl border border-red-500/50"
+              style={{
+                animation: "borderPulse 2s ease-in-out infinite",
+              }}
+            >
+              <style jsx>{`
+                @keyframes borderPulse {
+                  0%,
+                  100% {
+                    border-color: rgba(239, 68, 68, 0.5);
+                  }
+                  50% {
+                    border-color: rgba(239, 68, 68, 0.8);
+                  }
+                }
+              `}</style>
+              <div className="p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
+                    <span className="text-red-400 text-xl">🗑️</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">Confirmar eliminación</h3>
+                    <p className="text-red-400 text-sm">Esta acción no se puede deshacer</p>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <p className="text-gray-300 leading-relaxed">
+                    ¿Estás seguro de que quieres eliminar la tarea{" "}
+                    <span className="text-purple-400 font-medium">
+                      &quot;{taskToDelete.title}&quot;
+                    </span>
+                    ?
+                  </p>
+
+                  {taskToDelete.subtasks && taskToDelete.subtasks.length > 0 && (
+                    <div className="mt-4 p-3 bg-gray-700/50 rounded-lg border border-gray-600/50">
+                      <p className="text-sm text-gray-400 mb-1">⚠️ Advertencia:</p>
+                      <p className="text-sm text-yellow-400">
+                        Esta tarea tiene {taskToDelete.subtasks.length} subtarea(s) que también se
+                        eliminarán.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-end space-x-3">
+                  <button
+                    onClick={cancelDelete}
+                    className="px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-700/50 border border-gray-600/50 hover:border-gray-500/50 rounded-lg transition-all duration-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 font-medium"
+                  >
+                    Eliminar
                   </button>
                 </div>
               </div>

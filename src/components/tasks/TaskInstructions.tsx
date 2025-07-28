@@ -84,14 +84,6 @@ export default function TaskInstructions({ isVisible, onClose }: TaskInstruction
           </div>
         </div>
       </div>
-
-      {/* Indicador de estado del tablero */}
-      <div className="mt-4 pt-4 border-t border-gray-700/50">
-        <div className="flex items-center justify-center lg:justify-start space-x-2 text-xs lg:text-sm text-gray-500">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span>Tablero interactivo activo</span>
-        </div>
-      </div>
     </div>
   );
 }

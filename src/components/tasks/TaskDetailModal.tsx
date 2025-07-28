@@ -54,6 +54,8 @@ export default function TaskDetailModal({
   const [editedPriority, setEditedPriority] = useState<"low" | "medium" | "high">("medium");
   const [editedStatus, setEditedStatus] = useState<"todo" | "in-progress" | "done">("todo");
   const [showIncompleteSubtasksAlert, setShowIncompleteSubtasksAlert] = useState(false);
+  const [showSubtaskBlockAlert, setShowSubtaskBlockAlert] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -107,6 +109,16 @@ export default function TaskDetailModal({
 
   const handleToggleSubtask = (subtaskIndex: number) => {
     if (task) {
+      // Verificar si la tarea principal está completada y se está intentando marcar una subtarea como pendiente
+      const currentSubtask = task.subtasks[subtaskIndex];
+      const wouldBecomePending = currentSubtask.completed && task.status === "done";
+
+      if (wouldBecomePending) {
+        // Mostrar popup personalizado y evitar el cambio
+        setShowSubtaskBlockAlert(true);
+        return;
+      }
+
       // Crear una copia de las subtareas con el estado alternado
       const updatedSubtasks = task.subtasks.map((subtask, index) => {
         if (index === subtaskIndex) {
@@ -135,12 +147,15 @@ export default function TaskDetailModal({
 
   const handleCreateSubtask = () => {
     if (newSubtaskTitle.trim() && task) {
+      // Determinar si la subtarea debe estar completada basado en el estado de la tarea principal
+      const isTaskCompleted = task.status === "done";
+
       // Crear una nueva subtarea con campos temporales para el frontend
       // El backend se encargará de generar los valores correctos
       const newSubtask: Subtask = {
         _id: `temp-${Date.now()}`, // ID temporal
         title: newSubtaskTitle.trim(),
-        completed: false,
+        completed: isTaskCompleted, // Marcar como completada si la tarea principal está completada
         createdAt: new Date().toISOString(), // Temporal
         updatedAt: new Date().toISOString(), // Temporal
       };
@@ -250,10 +265,19 @@ export default function TaskDetailModal({
   };
 
   const handleDelete = () => {
-    if (onDelete && confirm("¿Estás seguro de que quieres eliminar esta tarea?")) {
+    setShowDeleteConfirmation(true);
+  };
+
+  const confirmDelete = () => {
+    if (onDelete && task) {
       onDelete(task._id);
       handleClose();
     }
+    setShowDeleteConfirmation(false);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirmation(false);
   };
 
   return (
@@ -420,13 +444,6 @@ export default function TaskDetailModal({
 
                 <div className="flex items-center space-x-2">
                   <button
-                    onClick={handleEditTask}
-                    className="text-purple-400 hover:text-purple-300 transition-colors p-2 hover:bg-purple-500/10 rounded-lg"
-                    title="Editar tarea"
-                  >
-                    ✏️
-                  </button>
-                  <button
                     onClick={handleClose}
                     className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-700/50 rounded-lg"
                   >
@@ -488,43 +505,72 @@ export default function TaskDetailModal({
               {/* Lista de subtareas existentes */}
               {task.subtasks && task.subtasks.length > 0 && (
                 <div className="space-y-2 mb-3">
-                  {task.subtasks.map((subtask, index) => (
-                    <div
-                      key={subtask._id || index}
-                      className="flex items-center space-x-3 p-2 bg-gray-700/30 hover:bg-gray-700/50 rounded-lg transition-colors duration-200 group"
-                    >
-                      <span
-                        className="text-lg group-hover:scale-110 transition-transform duration-200 cursor-pointer"
-                        onClick={() => handleToggleSubtask(index)}
-                        title={`Clic para marcar como ${
-                          subtask.completed ? "pendiente" : "completada"
+                  {task.subtasks.map((subtask, index) => {
+                    const isTaskCompleted = task.status === "done";
+                    const canToggle = !isTaskCompleted || !subtask.completed; // Permitir solo completar si la tarea está completada
+
+                    return (
+                      <div
+                        key={subtask._id || index}
+                        className={`flex items-center space-x-3 p-2 rounded-lg transition-colors duration-200 group ${
+                          canToggle
+                            ? "bg-gray-700/30 hover:bg-gray-700/50"
+                            : "bg-gray-700/20 border border-orange-500/30"
                         }`}
                       >
-                        {subtask.completed ? "✅" : "⭕"}
-                      </span>
-                      <span
-                        className={`flex-1 transition-all duration-200 cursor-pointer ${
-                          subtask.completed ? "text-gray-500 line-through" : "text-gray-300"
-                        }`}
-                        onClick={() => handleToggleSubtask(index)}
-                        title={`Clic para marcar como ${
-                          subtask.completed ? "pendiente" : "completada"
-                        }`}
-                      >
-                        {subtask.title}
-                      </span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteSubtask(index, subtask.title);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1 rounded transition-all duration-200"
-                        title="Eliminar subtarea"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  ))}
+                        <span
+                          className={`text-lg transition-transform duration-200 ${
+                            canToggle
+                              ? "group-hover:scale-110 cursor-pointer"
+                              : "cursor-not-allowed opacity-60"
+                          }`}
+                          onClick={() => canToggle && handleToggleSubtask(index)}
+                          title={
+                            canToggle
+                              ? `Clic para marcar como ${
+                                  subtask.completed ? "pendiente" : "completada"
+                                }`
+                              : "No se puede cambiar el estado: tarea principal completada"
+                          }
+                        >
+                          {subtask.completed ? "✅" : "⭕"}
+                        </span>
+                        <span
+                          className={`flex-1 transition-all duration-200 ${
+                            subtask.completed ? "text-gray-500 line-through" : "text-gray-300"
+                          } ${canToggle ? "cursor-pointer" : "cursor-not-allowed opacity-60"}`}
+                          onClick={() => canToggle && handleToggleSubtask(index)}
+                          title={
+                            canToggle
+                              ? `Clic para marcar como ${
+                                  subtask.completed ? "pendiente" : "completada"
+                                }`
+                              : "No se puede cambiar el estado: tarea principal completada"
+                          }
+                        >
+                          {subtask.title}
+                        </span>
+                        {!canToggle && (
+                          <span
+                            className="text-orange-400 text-xs opacity-60"
+                            title="Bloqueado: tarea principal completada"
+                          >
+                            🔒
+                          </span>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSubtask(index, subtask.title);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1 rounded transition-all duration-200"
+                          title="Eliminar subtarea"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
@@ -532,6 +578,19 @@ export default function TaskDetailModal({
               {isCreatingSubtask && (
                 <div className="bg-gray-700/20 rounded-lg p-4 border border-gray-600/50">
                   <h4 className="text-sm font-medium text-gray-300 mb-3">Nueva Subtarea</h4>
+
+                  {/* Mensaje informativo para tareas completadas */}
+                  {task.status === "done" && (
+                    <div className="mb-3 p-2 bg-green-500/10 border border-green-500/30 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-green-400 text-sm">✅</span>
+                        <span className="text-green-400 text-xs">
+                          Esta subtarea se marcará automáticamente como completada
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-3">
                     <input
                       type="text"
@@ -632,31 +691,37 @@ export default function TaskDetailModal({
 
           {/* Footer */}
           {!isEditingTask && (
-            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-700/50">
-              {onDelete && (
-                <button
-                  onClick={handleDelete}
-                  className="px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/30 hover:border-red-500/50 rounded-lg transition-all duration-200"
-                >
-                  Eliminar
-                </button>
-              )}
+            <div className="flex items-center justify-between p-6 border-t border-gray-700/50">
+              {/* Botón eliminar a la izquierda */}
+              <div>
+                {onDelete && (
+                  <button
+                    onClick={handleDelete}
+                    className="px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/30 hover:border-red-500/50 rounded-lg transition-all duration-200"
+                  >
+                    Eliminar
+                  </button>
+                )}
+              </div>
 
-              {onEdit && (
-                <button
-                  onClick={handleEditTask}
-                  className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg transition-all duration-200"
-                >
-                  Editar
-                </button>
-              )}
+              {/* Botones editar y cerrar a la derecha */}
+              <div className="flex items-center space-x-3">
+                {onEdit && (
+                  <button
+                    onClick={handleEditTask}
+                    className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg transition-all duration-200"
+                  >
+                    Editar
+                  </button>
+                )}
 
-              <button
-                onClick={handleClose}
-                className="px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-700/50 border border-gray-600/50 hover:border-gray-500/50 rounded-lg transition-all duration-200"
-              >
-                Cerrar
-              </button>
+                <button
+                  onClick={handleClose}
+                  className="px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-700/50 border border-gray-600/50 hover:border-gray-500/50 rounded-lg transition-all duration-200"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -733,6 +798,141 @@ export default function TaskDetailModal({
                     className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 font-medium"
                   >
                     Entendido
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Popup de alerta para bloqueo de subtareas */}
+      {showSubtaskBlockAlert && (
+        <div className="fixed inset-0 z-70 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-all duration-300" />
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div
+              className="relative w-full max-w-md mx-auto bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-2xl border border-orange-500/50"
+              style={{
+                animation: "borderPulse 2s ease-in-out infinite",
+              }}
+            >
+              <style jsx>{`
+                @keyframes borderPulse {
+                  0%,
+                  100% {
+                    border-color: rgba(249, 115, 22, 0.5);
+                  }
+                  50% {
+                    border-color: rgba(249, 115, 22, 0.8);
+                  }
+                }
+              `}</style>
+              <div className="p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
+                    <span className="text-orange-400 text-xl">🔒</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">Acción bloqueada</h3>
+                    <p className="text-orange-400 text-sm">Tarea principal completada</p>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <p className="text-gray-300 leading-relaxed">
+                    No puedes marcar una{" "}
+                    <span className="text-cyan-400 font-medium">subtarea como pendiente</span>{" "}
+                    mientras la tarea principal esté en estado{" "}
+                    <span className="text-pink-400 font-medium">completada</span>.
+                  </p>
+
+                  <div className="mt-4 p-3 bg-gray-700/50 rounded-lg border border-gray-600/50">
+                    <p className="text-sm text-gray-400 mb-2">💡 Sugerencia:</p>
+                    <p className="text-sm text-gray-300">
+                      Para modificar esta subtarea, primero mueve la tarea principal a{" "}
+                      <span className="text-purple-400">&quot;Pendiente&quot;</span> o{" "}
+                      <span className="text-cyan-400">&quot;En Progreso&quot;</span>.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3">
+                  <button
+                    onClick={() => setShowSubtaskBlockAlert(false)}
+                    className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-all duration-200 font-medium"
+                  >
+                    Entendido
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Popup de confirmación de eliminación */}
+      {showDeleteConfirmation && (
+        <div className="fixed inset-0 z-80 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-all duration-300" />
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div
+              className="relative w-full max-w-md mx-auto bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-2xl border border-red-500/50"
+              style={{
+                animation: "borderPulse 2s ease-in-out infinite",
+              }}
+            >
+              <style jsx>{`
+                @keyframes borderPulse {
+                  0%,
+                  100% {
+                    border-color: rgba(239, 68, 68, 0.5);
+                  }
+                  50% {
+                    border-color: rgba(239, 68, 68, 0.8);
+                  }
+                }
+              `}</style>
+              <div className="p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
+                    <span className="text-red-400 text-xl">🗑️</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">Confirmar eliminación</h3>
+                    <p className="text-red-400 text-sm">Esta acción no se puede deshacer</p>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <p className="text-gray-300 leading-relaxed">
+                    ¿Estás seguro de que quieres eliminar la tarea{" "}
+                    <span className="text-purple-400 font-medium">&quot;{task?.title}&quot;</span>?
+                  </p>
+
+                  {task?.subtasks && task.subtasks.length > 0 && (
+                    <div className="mt-4 p-3 bg-gray-700/50 rounded-lg border border-gray-600/50">
+                      <p className="text-sm text-gray-400 mb-1">⚠️ Advertencia:</p>
+                      <p className="text-sm text-yellow-400">
+                        Esta tarea tiene {task.subtasks.length} subtarea(s) que también se
+                        eliminarán.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-end space-x-3">
+                  <button
+                    onClick={cancelDelete}
+                    className="px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-700/50 border border-gray-600/50 hover:border-gray-500/50 rounded-lg transition-all duration-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 font-medium"
+                  >
+                    Eliminar
                   </button>
                 </div>
               </div>
