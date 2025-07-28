@@ -1,12 +1,7 @@
 "use client";
 
 import { CreateTaskData } from "@/types";
-import ModalBase from "./ModalBase";
-import FormInput from "./FormInput";
-import FormTextarea from "./FormTextarea";
-import FormSelect from "./FormSelect";
-import FormActions from "./FormActions";
-import { useCreateTask } from "./useCreateTask";
+import { ModalBase, FormInput, FormTextarea, FormSelect, FormActions, useCreateTask } from "./";
 
 interface CreateTaskModalProps {
   isOpen: boolean;

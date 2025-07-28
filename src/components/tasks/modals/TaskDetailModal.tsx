@@ -11,7 +11,7 @@ import {
   CommentForm,
   TaskInfo,
   useTaskDetail,
-} from "./index";
+} from "./";
 
 interface TaskDetailModalProps {
   isOpen: boolean;

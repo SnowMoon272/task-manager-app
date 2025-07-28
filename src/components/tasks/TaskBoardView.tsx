@@ -144,7 +144,7 @@ export default function TaskBoardView({
     >
       <div
         className={`grid gap-4 sm:gap-6 ${
-          filters.status ? "grid-cols-1 w-full max-w-2xl mx-auto" : "grid-cols-1 md:grid-cols-3"
+          filters.status ? "grid-cols-1 w-full" : "grid-cols-1 md:grid-cols-3"
         }`}
       >
         {getVisibleColumns().map((column) => (

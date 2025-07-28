@@ -1,8 +1,7 @@
 "use client";
 
 import { Task, CreateTaskData } from "@/types";
-import CreateTaskModal from "./modals/CreateTaskModal";
-import TaskDetailModal from "./modals/TaskDetailModal";
+import { CreateTaskModal, TaskDetailModal } from "./modals";
 import ConfirmationModal from "../ui/ConfirmationModal";
 
 interface TaskBoardModalsProps {
