@@ -1,15 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuthStore } from "@/store/auth";
 import { useTasksStore } from "@/store/tasks";
 import { Task, CreateTaskData } from "@/types";
 import TaskBoardView from "./TaskBoardView";
-import TaskBoardModals from "./TaskBoardModals";
 import TaskBoardEmptyStates from "./TaskBoardEmptyStates";
 import TaskBoardHeader, { TaskFilters } from "./TaskBoardHeader";
 
-export default function TaskBoardContainer() {
+export default function TaskBoardContainer({
+  onModalStatesChange,
+}: {
+  onModalStatesChange?: (states: {
+    isCreateModalOpen: boolean;
+    selectedTask: Task | null;
+    taskToDelete: Task | null;
+    errorMessage: string | null;
+    showIncompleteSubtasksAlert: boolean;
+    alertTask: Task | null;
+    onCloseCreateModal: () => void;
+    onCreateTask: (taskData: CreateTaskData) => Promise<void>;
+    onCloseDetailModal: () => void;
+    onEditTask: (task: Task) => Promise<void>;
+    onDeleteTask: (taskId: string) => void;
+    onUpdateSubtasks: (taskId: string, subtasks: Task["subtasks"]) => Promise<void>;
+    onCloseDeleteModal: () => void;
+    onConfirmDelete: () => Promise<void>;
+    onCloseErrorModal: () => void;
+    onCloseIncompleteSubtasksAlert: () => void;
+  }) => void;
+}) {
   // Store hooks
   const { user } = useAuthStore();
   const {
@@ -72,47 +92,99 @@ export default function TaskBoardContainer() {
   }, [tasks, selectedTask]);
 
   // Handlers para modales
-  const handleCreateTask = async (taskData: CreateTaskData) => {
-    await createTask(taskData);
-    setIsCreateModalOpen(false);
-  };
+  const handleCreateTask = useCallback(
+    async (taskData: CreateTaskData) => {
+      await createTask(taskData);
+      setIsCreateModalOpen(false);
+    },
+    [createTask],
+  );
 
-  const handleEditTask = async (updatedTask: Task) => {
-    try {
-      await updateTask(updatedTask._id, {
-        title: updatedTask.title,
-        description: updatedTask.description,
-        priority: updatedTask.priority,
-        status: updatedTask.status,
-        subtasks: updatedTask.subtasks,
-        comments: updatedTask.comments,
-      });
-    } catch (error) {
-      console.error("Error updating task:", error);
-    }
-  };
+  const handleEditTask = useCallback(
+    async (updatedTask: Task) => {
+      try {
+        await updateTask(updatedTask._id, {
+          title: updatedTask.title,
+          description: updatedTask.description,
+          priority: updatedTask.priority,
+          status: updatedTask.status,
+          subtasks: updatedTask.subtasks,
+          comments: updatedTask.comments,
+        });
+      } catch (error) {
+        console.error("Error updating task:", error);
+      }
+    },
+    [updateTask],
+  );
 
-  const handleDeleteTaskFromModal = (taskId: string) => {
-    const task = tasks.find((t: Task) => t._id === taskId);
-    if (task) {
-      setTaskToDelete(task);
-    }
-  };
+  const handleDeleteTaskFromModal = useCallback(
+    (taskId: string) => {
+      const task = tasks.find((t: Task) => t._id === taskId);
+      if (task) {
+        setTaskToDelete(task);
+      }
+    },
+    [tasks],
+  );
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = useCallback(async () => {
     if (taskToDelete) {
       await deleteTask(taskToDelete._id);
     }
     setTaskToDelete(null);
-  };
+  }, [taskToDelete, deleteTask]);
 
-  const handleUpdateSubtasks = async (taskId: string, subtasks: Task["subtasks"]) => {
-    try {
-      await updateTask(taskId, { subtasks });
-    } catch (error) {
-      console.error("Error updating subtasks:", error);
+  const handleUpdateSubtasks = useCallback(
+    async (taskId: string, subtasks: Task["subtasks"]) => {
+      try {
+        await updateTask(taskId, { subtasks });
+      } catch (error) {
+        console.error("Error updating subtasks:", error);
+      }
+    },
+    [updateTask],
+  );
+
+  // Comunicar estados de modales al padre (después de declarar los handlers)
+  useEffect(() => {
+    if (onModalStatesChange) {
+      onModalStatesChange({
+        isCreateModalOpen,
+        selectedTask,
+        taskToDelete,
+        errorMessage,
+        showIncompleteSubtasksAlert,
+        alertTask,
+        onCloseCreateModal: () => setIsCreateModalOpen(false),
+        onCreateTask: handleCreateTask,
+        onCloseDetailModal: () => setSelectedTask(null),
+        onEditTask: handleEditTask,
+        onDeleteTask: handleDeleteTaskFromModal,
+        onUpdateSubtasks: handleUpdateSubtasks,
+        onCloseDeleteModal: () => setTaskToDelete(null),
+        onConfirmDelete: handleConfirmDelete,
+        onCloseErrorModal: () => setErrorMessage(null),
+        onCloseIncompleteSubtasksAlert: () => {
+          setShowIncompleteSubtasksAlert(false);
+          setAlertTask(null);
+        },
+      });
     }
-  };
+  }, [
+    isCreateModalOpen,
+    selectedTask,
+    taskToDelete,
+    errorMessage,
+    showIncompleteSubtasksAlert,
+    alertTask,
+    onModalStatesChange,
+    handleCreateTask,
+    handleEditTask,
+    handleDeleteTaskFromModal,
+    handleUpdateSubtasks,
+    handleConfirmDelete,
+  ]);
 
   // Handlers para interacciones
   const handleTaskClick = (task: Task) => {
@@ -248,29 +320,6 @@ export default function TaskBoardContainer() {
             onDragEnd={handleDragEnd}
           />
         )}
-
-        {/* Modales */}
-        <TaskBoardModals
-          isCreateModalOpen={isCreateModalOpen}
-          onCloseCreateModal={() => setIsCreateModalOpen(false)}
-          onCreateTask={handleCreateTask}
-          selectedTask={selectedTask}
-          onCloseDetailModal={() => setSelectedTask(null)}
-          onEditTask={handleEditTask}
-          onDeleteTask={handleDeleteTaskFromModal}
-          onUpdateSubtasks={handleUpdateSubtasks}
-          taskToDelete={taskToDelete}
-          onCloseDeleteModal={() => setTaskToDelete(null)}
-          onConfirmDelete={handleConfirmDelete}
-          errorMessage={errorMessage}
-          onCloseErrorModal={() => setErrorMessage(null)}
-          showIncompleteSubtasksAlert={showIncompleteSubtasksAlert}
-          alertTask={alertTask}
-          onCloseIncompleteSubtasksAlert={() => {
-            setShowIncompleteSubtasksAlert(false);
-            setAlertTask(null);
-          }}
-        />
       </div>
     </div>
   );
