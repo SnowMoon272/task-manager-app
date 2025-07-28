@@ -83,7 +83,7 @@ export default function TaskBoard() {
   useEffect(() => {
     fetchTasks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Solo ejecutar una vez al montar el componente
+  }, []);
 
   // Detectar cambios de usuario y limpiar tareas
   useEffect(() => {

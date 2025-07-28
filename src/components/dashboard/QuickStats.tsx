@@ -1,5 +1,7 @@
 "use client";
 
+import { ClockIcon, DocumentTextIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
+
 interface QuickStatsProps {
   todoTasks: number;
   inProgressTasks: number;
@@ -7,64 +9,84 @@ interface QuickStatsProps {
 }
 
 export default function QuickStats({ todoTasks, inProgressTasks, doneTasks }: QuickStatsProps) {
+  const stats = [
+    {
+      id: "todo",
+      name: "Pendientes",
+      value: todoTasks,
+      icon: DocumentTextIcon,
+      color: "purple",
+      borderColor: "border-purple-400/20",
+      hoverBorderColor: "hover:border-purple-400/40",
+      iconBg: "bg-purple-500/10",
+      iconColor: "text-purple-400",
+      hoverIconBg: "group-hover:bg-purple-500/20",
+    },
+    {
+      id: "progress",
+      name: "En progreso",
+      value: inProgressTasks,
+      icon: ClockIcon,
+      color: "cyan",
+      borderColor: "border-cyan-400/20",
+      hoverBorderColor: "hover:border-cyan-400/40",
+      iconBg: "bg-cyan-500/10",
+      iconColor: "text-cyan-400",
+      hoverIconBg: "group-hover:bg-cyan-500/20",
+    },
+    {
+      id: "done",
+      name: "Completadas",
+      value: doneTasks,
+      icon: CheckCircleIcon,
+      color: "green",
+      borderColor: "border-green-400/20",
+      hoverBorderColor: "hover:border-green-400/40",
+      iconBg: "bg-green-500/10",
+      iconColor: "text-green-400",
+      hoverIconBg: "group-hover:bg-green-500/20",
+    },
+  ];
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      {/* Tareas pendientes */}
-      <div className="bg-gray-800/50 backdrop-blur-sm border border-purple-500/20 overflow-hidden shadow-lg rounded-lg hover:border-purple-500/40 transition-all duration-300">
-        <div className="p-5">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-md flex items-center justify-center">
-                <span className="text-white font-bold">📝</span>
-              </div>
-            </div>
-            <div className="ml-5 w-0 flex-1">
-              <dl>
-                <dt className="text-sm font-medium text-gray-400 truncate">Tareas pendientes</dt>
-                <dd className="text-lg font-medium text-white">{todoTasks}</dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
+      {stats.map((stat) => {
+        const IconComponent = stat.icon;
+        return (
+          <div
+            key={stat.id}
+            className={`group relative bg-gray-800/30 backdrop-blur-sm border ${stat.borderColor} ${stat.hoverBorderColor} rounded-lg p-3 sm:p-4 transition-all duration-300 hover:shadow-lg`}
+          >
+            {/* Indicador de color sutil */}
+            <div
+              className={`absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-${stat.color}-400/50 to-transparent`}
+            ></div>
 
-      {/* En progreso */}
-      <div className="bg-gray-800/50 backdrop-blur-sm border border-cyan-500/20 overflow-hidden shadow-lg rounded-lg hover:border-cyan-500/40 transition-all duration-300">
-        <div className="p-5">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-md flex items-center justify-center">
-                <span className="text-white font-bold">⏳</span>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div
+                    className={`${stat.iconBg} ${stat.hoverIconBg} p-1.5 sm:p-2 rounded-lg transition-all duration-300`}
+                  >
+                    <IconComponent className={`w-4 h-4 sm:w-5 sm:h-5 ${stat.iconColor}`} />
+                  </div>
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-gray-400 mb-0.5">
+                      {stat.name}
+                    </p>
+                    <p className="text-xl sm:text-2xl font-bold text-white">{stat.value}</p>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="ml-5 w-0 flex-1">
-              <dl>
-                <dt className="text-sm font-medium text-gray-400 truncate">En progreso</dt>
-                <dd className="text-lg font-medium text-white">{inProgressTasks}</dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Completadas */}
-      <div className="bg-gray-800/50 backdrop-blur-sm border border-pink-500/20 overflow-hidden shadow-lg rounded-lg hover:border-pink-500/40 transition-all duration-300">
-        <div className="p-5">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-purple-500 rounded-md flex items-center justify-center">
-                <span className="text-white font-bold">✅</span>
+              {/* Número grande como elemento decorativo */}
+              <div className="hidden lg:block text-4xl xl:text-5xl font-black text-gray-700/10 select-none">
+                {stat.value}
               </div>
             </div>
-            <div className="ml-5 w-0 flex-1">
-              <dl>
-                <dt className="text-sm font-medium text-gray-400 truncate">Completadas</dt>
-                <dd className="text-lg font-medium text-white">{doneTasks}</dd>
-              </dl>
-            </div>
           </div>
-        </div>
-      </div>
+        );
+      })}
     </div>
   );
 }

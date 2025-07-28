@@ -29,14 +29,12 @@ export default function DashboardPage() {
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 relative z-10">
         <div className="px-4 py-6 sm:px-0">
-          {/* Estadísticas rápidas */}
           <QuickStats
             todoTasks={todoTasks}
             inProgressTasks={inProgressTasks}
             doneTasks={doneTasks}
           />
 
-          {/* Tablero de tareas */}
           <div className="border-2 border-purple-500/30 bg-gray-800/30 backdrop-blur-sm rounded-lg p-6">
             <TaskBoard />
           </div>

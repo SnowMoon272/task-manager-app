@@ -16,7 +16,8 @@ export default function SpaceButton({
   className = "",
   onClick,
 }: SpaceButtonProps) {
-  const baseClasses = "font-medium px-4 py-2 rounded-lg transition-all duration-300 text-sm";
+  const baseClasses =
+    "font-medium px-4 py-2 sm:px-6 sm:py-3 rounded-lg transition-all duration-300 text-sm sm:text-base inline-flex items-center justify-center";
 
   const variantClasses = {
     primary:
